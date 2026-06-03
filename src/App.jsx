@@ -43,6 +43,7 @@ export default function App() {
   const [showReportsDropdown, setShowReportsDropdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
+  const [capProgressAt100, setCapProgressAt100] = useState(false);
   
   const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleString('en-IN', {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -63,6 +64,13 @@ export default function App() {
     }
   }, [darkMode]);
 
+  // Recompute analytics when cap setting changes
+  useEffect(() => {
+    if (rawCensusData.length > 0) {
+      setAnalytics(computeAnalytics(rawCensusData, capProgressAt100));
+    }
+  }, [capProgressAt100, rawCensusData]);
+
   const handleLoadMockData = () => {
     const data = generateMockCensusData();
     // Since mock data generator doesn't use the mapping, let's map zones dynamically in App.jsx for mock data
@@ -82,7 +90,7 @@ export default function App() {
       };
     });
     setRawCensusData(dataWithMappedZones);
-    const results = computeAnalytics(dataWithMappedZones);
+    const results = computeAnalytics(dataWithMappedZones, capProgressAt100);
     setAnalytics(results);
     setSelectedZoneFilter('');
     setSelectedChargeFilter('');
@@ -96,7 +104,7 @@ export default function App() {
 
   const handleDataUploaded = (processedData) => {
     setRawCensusData(processedData);
-    const results = computeAnalytics(processedData);
+    const results = computeAnalytics(processedData, capProgressAt100);
     setAnalytics(results);
     setActiveTab('dashboard');
     setSelectedZoneFilter('');
@@ -167,7 +175,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-200">
+    <div className="min-h-screen bg-slate-50 text-slate-800 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-200 print:bg-white print:text-black print:block">
       
       {/* Sidebar Navigation */}
       <Sidebar 
@@ -193,7 +201,7 @@ export default function App() {
       )}
 
       {/* Main Panel Shell */}
-      <div className={`pl-0 ${desktopSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'} flex flex-col min-h-screen transition-all duration-300`}>
+      <div className={`pl-0 ${desktopSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'} flex flex-col min-h-screen transition-all duration-300 print:block print:pl-0 print:min-h-0`}>
         
         {/* Top Navigation Bar */}
         <header className="no-print sticky top-0 z-10 flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-4 sm:px-8 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
@@ -436,12 +444,14 @@ export default function App() {
         )}
 
         {/* Tab Panel View Router */}
-        <main className="flex-1 pb-16">
+        <main className="flex-1 pb-16 print:block print:pb-0">
           {activeTab === 'dashboard' && (
             <DashboardOverview 
               summary={currentAnalytics?.summary} 
               nonPerformingCount={currentAnalytics?.nonPerformingCharges.length || 0}
               setActiveTab={setActiveTab}
+              capProgressAt100={capProgressAt100}
+              setCapProgressAt100={setCapProgressAt100}
             />
           )}
 
@@ -486,6 +496,7 @@ export default function App() {
           {activeTab === 'contacts' && (
             <ContactReport 
               data={filteredData}
+              capProgressAt100={capProgressAt100}
             />
           )}
 

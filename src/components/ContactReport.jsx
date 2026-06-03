@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Search, Phone, Users, MapPin, Building, Hash, Download, FileSpreadsheet, FileText } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 // Helper for professional name formatting
 const toTitleCase = (str) => {
@@ -65,6 +67,10 @@ export default function ContactReport({ data = [] }) {
     }
 
     return matchesSearch && matchesZone && matchesWard && matchesCircle && matchesStatus && matchesProgress && matchesFeeding;
+  }).sort((a, b) => {
+    const nameA = (a.supervisorName || '').toLowerCase();
+    const nameB = (b.supervisorName || '').toLowerCase();
+    return nameA.localeCompare(nameB);
   });
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -86,7 +92,7 @@ export default function ContactReport({ data = [] }) {
       'Enumerator No.': item.enumeratorNumber || '',
       'Expected': item.expectedHouses,
       'Feeding': item.surveyedHouses,
-      'Progress %': item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) + '%' : '0%'
+      'Progress %': item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) + '%' : '0%'
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -131,6 +137,127 @@ export default function ContactReport({ data = [] }) {
     document.body.removeChild(link);
   };
 
+  const exportToPDF = async () => {
+    if (filteredData.length === 0) return;
+    
+    // Default landscape format: a4
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Try to load and embed the logo
+    try {
+      const img = new Image();
+      img.src = '/logo.png';
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      // Maintain aspect ratio while making it larger
+      const aspectRatio = img.width / img.height;
+      const targetHeight = 24;
+      const targetWidth = targetHeight * aspectRatio;
+
+      // Place logo slightly to the left of the center title
+      doc.addImage(dataUrl, 'PNG', (pageWidth / 2) - 85, 6, targetWidth, targetHeight);
+    } catch (e) {
+      console.log('Could not load logo for PDF', e);
+    }
+    
+    doc.setFontSize(22);
+    doc.setTextColor(30, 41, 59); // slate-800
+    doc.setFont(undefined, 'bold');
+    doc.text("CENSUS OF INDIA 2027", (pageWidth / 2) + 5, 20, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139); // slate-500
+    doc.setFont(undefined, 'bold');
+    doc.text("GOVERNMENT OF INDIA • NATIONAL CENSUS", (pageWidth / 2) + 5, 26, { align: 'center' });
+    
+    // Divider line
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.5);
+    doc.line(14, 32, pageWidth - 14, 32);
+
+    doc.setFontSize(12);
+    doc.setTextColor(30, 41, 59);
+    doc.setFont(undefined, 'bold');
+    doc.text("FIELD CONTACTS & ENUMERATION PROGRESS REPORT", pageWidth / 2, 40, { align: 'center' });
+
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139); // slate-500
+    doc.setFont(undefined, 'normal');
+    doc.text(`Data Refreshed: ${data.length > 0 && data[0].date ? data[0].date : new Date().toLocaleDateString('en-IN')}`, pageWidth / 2, 45, { align: 'center' });
+    
+    const tableHeaders = [['Sr. No.', 'Charge ID', 'Uploaded HLB', 'Map HLB', 'Village/Ward', 'Area', 'Sup. Circle', 'Supervisor Name', 'Sup. No.', 'Enumerator Name', 'Enum. No.', 'Expected', 'Feeding', 'Progress']];
+    
+    const tableData = filteredData.map((item, index) => [
+      index + 1,
+      item.chargeId || '-',
+      item.hlbId || '-',
+      item.originalHlbCode || '-',
+      item.villageWard || '-',
+      item.area || '-',
+      item.supervisorCircle || '-',
+      toTitleCase(item.supervisorName),
+      item.supervisorNumber || '-',
+      toTitleCase(item.enumeratorName),
+      item.enumeratorNumber || '-',
+      item.expectedHouses || '0',
+      item.surveyedHouses || '0',
+      (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0) + '%'
+    ]);
+
+    autoTable(doc, {
+      head: tableHeaders,
+      body: tableData,
+      startY: 50,
+      theme: 'grid',
+      margin: { left: 5, right: 5, top: 10, bottom: 10 },
+      styles: {
+        fontSize: 6,
+        cellPadding: 1.5,
+        valign: 'middle',
+        halign: 'center',
+        lineWidth: 0.1,
+        lineColor: [226, 232, 240], // slate-200
+        textColor: [51, 65, 85], // slate-700
+      },
+      headStyles: {
+        fillColor: [30, 41, 59], // slate-800 (Premium dark header)
+        textColor: [255, 255, 255], // white
+        fontStyle: 'bold',
+        halign: 'center',
+        lineWidth: 0.1,
+        lineColor: [15, 23, 42],
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252], // slate-50 (Subtle alternating rows)
+      },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 10 },
+        11: { halign: 'right', cellWidth: 15 },
+        12: { halign: 'right', cellWidth: 15, fontStyle: 'bold', textColor: [29, 78, 216] }, // blue-700
+        13: { halign: 'right', cellWidth: 15, fontStyle: 'bold' }
+      },
+      didDrawPage: function (data) {
+        // Footer text
+        let str = 'Page ' + doc.internal.getNumberOfPages();
+        doc.setFontSize(8);
+        const pageSize = doc.internal.pageSize;
+        const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
+        doc.text(str, data.settings.margin.left, pageHeight - 10);
+      }
+    });
+
+    doc.save(`Census_Field_Contacts_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   return (
     <div className="space-y-6 p-6 animate-slide-up print:p-0 print:space-y-2">
       <style>{`
@@ -144,8 +271,6 @@ export default function ContactReport({ data = [] }) {
           table { 
             width: 100% !important; 
             max-width: 100% !important; 
-            font-size: 8px !important; 
-            table-layout: fixed !important; 
             border-collapse: collapse !important;
           }
           th, td { 
@@ -155,7 +280,7 @@ export default function ContactReport({ data = [] }) {
             vertical-align: middle !important;
           }
           th {
-            font-size: 7px !important;
+            font-size: 10px !important;
             font-weight: 800 !important;
             background-color: #f8fafc !important;
             color: #0f172a !important;
@@ -164,10 +289,11 @@ export default function ContactReport({ data = [] }) {
             overflow-wrap: normal !important;
           }
           td {
+            font-size: 10px !important;
             color: #1e293b !important;
             word-wrap: break-word !important;
             overflow-wrap: break-word !important;
-            line-height: 1.3 !important;
+            line-height: 1.4 !important;
           }
           
           /* Force break on long numbers only */
@@ -189,7 +315,7 @@ export default function ContactReport({ data = [] }) {
           th:nth-child(13), td:nth-child(13) { width: 5.5%; }  /* Feeding */
           th:nth-child(14), td:nth-child(14) { width: 6%; }  /* Progress */
           
-          .overflow-x-auto { overflow: hidden !important; }
+          .overflow-x-auto { overflow: visible !important; }
         }
       `}</style>
 
@@ -226,11 +352,18 @@ export default function ContactReport({ data = [] }) {
                 CSV
               </button>
               <button 
+                onClick={exportToPDF}
+                className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl bg-red-500 hover:bg-red-600 text-white px-4 py-2 text-xs font-bold shadow-sm shadow-red-500/20 transition-all"
+              >
+                <Download className="h-4 w-4" />
+                Download PDF
+              </button>
+              <button 
                 onClick={() => window.print()}
                 className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 text-xs font-bold shadow-sm shadow-slate-800/20 dark:bg-slate-700 dark:hover:bg-slate-600 transition-all hidden sm:flex"
               >
-                <Download className="h-4 w-4" />
-                Print/PDF
+                <FileText className="h-4 w-4" />
+                Print Layout
               </button>
             </div>
             <div className="flex flex-wrap gap-2 w-full">
@@ -311,7 +444,7 @@ export default function ContactReport({ data = [] }) {
       </div>
 
       {/* Modern Spreadsheet Data Grid */}
-      <div className="rounded border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden print:border-none print:shadow-none">
+      <div className="rounded border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden print:border-none print:shadow-none print:overflow-visible">
         
         {/* Official Letterhead Header */}
         <div className="flex flex-col items-center justify-center p-8 border-b-4 border-double border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 print:bg-white print:border-none print:p-2 print:pb-4">
@@ -367,28 +500,33 @@ export default function ContactReport({ data = [] }) {
                 <th className="py-3 px-4 text-right">Progress %</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800 print:divide-slate-400">
+            
+            {/* Screen View: Paginated Data */}
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800 print:hidden">
               {paginatedData.length > 0 ? (
-                paginatedData.map((item, index) => (
-                  <tr key={index} className="hover:bg-amber-50/50 dark:hover:bg-slate-800/50 transition-colors print:break-inside-avoid">
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 text-center font-bold text-slate-500 print:border-slate-400 print:text-black">{((currentPage - 1) * itemsPerPage) + index + 1}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-mono text-xs text-slate-500 print:border-slate-400 print:text-black">{item.chargeId}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-slate-800 dark:text-slate-100 print:border-slate-400 print:text-black">{item.hlbId}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-mono text-purple-700 dark:text-purple-400 font-bold print:border-slate-400 print:text-black">{item.originalHlbCode || '-'}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-medium print:border-slate-400 print:text-black">{item.villageWard || '-'}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-medium print:border-slate-400 print:text-black">{item.area}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 text-center font-bold text-amber-700 dark:text-amber-500 print:border-slate-400 print:text-black">{item.supervisorCircle || '-'}</td>
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-semibold text-slate-800 dark:text-slate-200 print:border-slate-400 print:text-black">{toTitleCase(item.supervisorName)}</td>
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-amber-700 dark:text-amber-500 print:border-slate-400 print:text-black">{item.supervisorNumber || '-'}</td>
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-semibold text-slate-800 dark:text-slate-200 print:border-slate-400 print:text-black">{toTitleCase(item.enumeratorName)}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-emerald-700 dark:text-emerald-500 print:border-slate-400 print:text-black">{item.enumeratorNumber || '-'}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 text-right font-mono font-medium print:border-slate-400 print:text-black">{item.expectedHouses}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 text-right font-mono font-bold text-blue-700 dark:text-blue-400 print:border-slate-400 print:text-black">{item.surveyedHouses}</td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-slate-700 dark:text-slate-300 print:border-slate-400 print:text-black">
+                paginatedData.map((item, index) => {
+                  const globalIndex = ((currentPage - 1) * itemsPerPage) + index + 1;
+                  return (
+                  <tr key={`screen-${index}`} className="hover:bg-amber-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 text-center font-bold text-slate-500">{globalIndex}</td>
+                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-mono text-xs text-slate-500">{item.chargeId}</td>
+                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-slate-800 dark:text-slate-100">{item.hlbId}</td>
+                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-mono text-purple-700 dark:text-purple-400 font-bold">{item.originalHlbCode || '-'}</td>
+                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-medium">{item.villageWard || '-'}</td>
+                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-medium">{item.area}</td>
+                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 text-center font-bold text-amber-700 dark:text-amber-500">{item.supervisorCircle || '-'}</td>
+                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">{toTitleCase(item.supervisorName)}</td>
+                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-amber-700 dark:text-amber-500">{item.supervisorNumber || '-'}</td>
+                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">{toTitleCase(item.enumeratorName)}</td>
+                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-emerald-700 dark:text-emerald-500">{item.enumeratorNumber || '-'}</td>
+                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 text-right font-mono font-medium">{item.expectedHouses}</td>
+                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 text-right font-mono font-bold text-blue-700 dark:text-blue-400">{item.surveyedHouses}</td>
+                    <td className="py-3 px-4 text-right font-mono font-bold text-slate-700 dark:text-slate-300">
                       {item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0}%
                     </td>
                   </tr>
-                ))
+                )})
+
               ) : (
                 <tr>
                   <td colSpan="14" className="py-12 text-center text-slate-500 dark:text-slate-400">
@@ -398,6 +536,38 @@ export default function ContactReport({ data = [] }) {
                       </div>
                       <p>No contacts found matching your search.</p>
                     </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+
+            {/* Print View: Full Filtered Data */}
+            <tbody className="hidden print:table-row-group print:divide-y print:divide-slate-400">
+              {filteredData.length > 0 ? (
+                filteredData.map((item, index) => (
+                  <tr key={`print-${index}`}>
+                    <td className="border-r print:border-slate-400 py-3 px-4 text-center font-bold print:text-black">{index + 1}</td>
+                    <td className="border-r print:border-slate-400 py-3 px-4 font-mono text-xs print:text-black">{item.chargeId}</td>
+                    <td className="border-r print:border-slate-400 py-3 px-4 font-mono font-medium print:text-black">{item.hlbId}</td>
+                    <td className="border-r print:border-slate-400 py-3 px-4 font-mono font-bold print:text-black">{item.originalHlbCode || '-'}</td>
+                    <td className="border-r print:border-slate-400 py-3 px-4 font-medium print:text-black">{item.villageWard || '-'}</td>
+                    <td className="border-r print:border-slate-400 py-3 px-4 font-medium print:text-black">{item.area}</td>
+                    <td className="border-r print:border-slate-400 py-3 px-4 text-center font-bold print:text-black">{item.supervisorCircle || '-'}</td>
+                    <td className="border print:border-slate-400 py-3 px-4 font-semibold print:text-black">{toTitleCase(item.supervisorName)}</td>
+                    <td className="border print:border-slate-400 py-3 px-4 font-mono font-medium print:text-black">{item.supervisorNumber || '-'}</td>
+                    <td className="border print:border-slate-400 py-3 px-4 font-semibold print:text-black">{toTitleCase(item.enumeratorName)}</td>
+                    <td className="border-r print:border-slate-400 py-3 px-4 font-mono font-medium print:text-black">{item.enumeratorNumber || '-'}</td>
+                    <td className="border-r print:border-slate-400 py-3 px-4 text-right font-mono font-medium print:text-black">{item.expectedHouses}</td>
+                    <td className="border-r print:border-slate-400 py-3 px-4 text-right font-mono font-bold print:text-black">{item.surveyedHouses}</td>
+                    <td className="py-3 px-4 text-right font-mono font-bold print:text-black">
+                      {item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0}%
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="14" className="py-12 text-center text-slate-500">
+                    No contacts found.
                   </td>
                 </tr>
               )}

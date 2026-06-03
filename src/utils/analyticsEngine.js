@@ -18,6 +18,16 @@ export const computeAnalytics = (rawHlbData) => {
   let totalVerifiedHouseholds = 0;
   let totalHouseholdsBase = 0;
 
+  const progressBreakdown = {
+    '0%': 0,
+    '1-25%': 0,
+    '26-50%': 0,
+    '51-75%': 0,
+    '76-99%': 0,
+    '100%': 0,
+    '>100%': 0
+  };
+
   const uniqueCharges = new Set();
   const uniqueSupervisors = new Set();
 
@@ -42,7 +52,7 @@ export const computeAnalytics = (rawHlbData) => {
     if (row.chargeId) uniqueCharges.add(row.chargeId);
     if (row.supervisorName) uniqueSupervisors.add(row.supervisorName);
 
-    // Track status counts
+    // Track status counts and progress breakdown
     if (isChargeLevel) {
       totalHlbs += Number(row.totalHlbs) || 0;
       completedHlbs += Number(row.completedHlbs) || 0;
@@ -56,6 +66,16 @@ export const computeAnalytics = (rawHlbData) => {
       } else {
         yetToStartHlbs++;
       }
+
+      // Progress breakdown
+      const progressPercent = expected > 0 ? Math.round((surveyed / expected) * 100) : 0;
+      if (progressPercent === 0) progressBreakdown['0%']++;
+      else if (progressPercent > 0 && progressPercent <= 25) progressBreakdown['1-25%']++;
+      else if (progressPercent > 25 && progressPercent <= 50) progressBreakdown['26-50%']++;
+      else if (progressPercent > 50 && progressPercent <= 75) progressBreakdown['51-75%']++;
+      else if (progressPercent > 75 && progressPercent < 100) progressBreakdown['76-99%']++;
+      else if (progressPercent === 100) progressBreakdown['100%']++;
+      else if (progressPercent > 100) progressBreakdown['>100%']++;
     }
 
     // Aggregate Charge-wise
@@ -299,7 +319,8 @@ export const computeAnalytics = (rawHlbData) => {
       completionPercent: parseFloat(completionPercent.toFixed(2)),
       totalPopulation: totalPopulationCounted,
       verifiedHouseholds: totalVerifiedHouseholds,
-      verificationPercent: parseFloat(verificationPercent.toFixed(2))
+      verificationPercent: parseFloat(verificationPercent.toFixed(2)),
+      progressBreakdown
     },
     chargesList,
     supervisorsList,

@@ -11,7 +11,9 @@ import {
   Percent, 
   Users, 
   ShieldCheck,
-  AlertTriangle
+  AlertTriangle,
+  PieChart,
+  BarChart2
 } from 'lucide-react';
 
 export default function DashboardOverview({ summary, nonPerformingCount, setActiveTab }) {
@@ -161,6 +163,48 @@ export default function DashboardOverview({ summary, nonPerformingCount, setActi
           );
         })}
       </div>
+
+      {/* Completion Analysis Dashboard */}
+      {summary.progressBreakdown && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 mt-6">
+          <div className="mb-6 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400">
+              <PieChart className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="font-display text-lg font-bold text-slate-800 dark:text-white">
+                Completion Analysis
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Breakdown of enumerators by their current survey progress
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
+            {[
+              { label: 'Total Enumerators', value: summary.totalHlbs, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+              { label: '0%', value: summary.progressBreakdown['0%'], color: 'text-slate-500', bg: 'bg-slate-100 dark:bg-slate-800' },
+              { label: '1 - 25%', value: summary.progressBreakdown['1-25%'], color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-900/20' },
+              { label: '26 - 50%', value: summary.progressBreakdown['26-50%'], color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/20' },
+              { label: '51 - 75%', value: summary.progressBreakdown['51-75%'], color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/20' },
+              { label: '76 - 99%', value: summary.progressBreakdown['76-99%'], color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+              { label: 'Exactly 100%', value: summary.progressBreakdown['100%'], color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+              { label: 'Exceeded (>100%)', value: summary.progressBreakdown['>100%'], color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-50 dark:bg-teal-900/20' }
+            ].map((stat, idx) => (
+              <div key={idx} className={`flex flex-col items-center justify-center rounded-xl p-4 text-center transition-transform hover:scale-105 ${stat.bg}`}>
+                <span className={`text-3xl font-black ${stat.color}`}>
+                  {stat.value}
+                </span>
+                <span className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                  {stat.label}
+                </span>
+                <span className="text-[10px] text-slate-400">Enumerators</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
