@@ -9,7 +9,8 @@ import {
   Lock,
   Menu,
   Shield,
-  HelpCircle
+  HelpCircle,
+  TrendingUp
 } from 'lucide-react';
 
 import Sidebar from './components/Sidebar';
@@ -20,6 +21,9 @@ import PerformanceTables from './components/PerformanceTables';
 import CompletionPredictor from './components/CompletionPredictor';
 import AiInsights from './components/AiInsights';
 import AdminLogin from './components/AdminLogin';
+import ContactReport from './components/ContactReport';
+import TrendsDashboard from './components/TrendsDashboard';
+import { saveSnapshot } from './utils/db';
 
 import { generateMockCensusData } from './utils/mockDataGenerator';
 import { computeAnalytics } from './utils/analyticsEngine';
@@ -38,6 +42,11 @@ export default function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showReportsDropdown, setShowReportsDropdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
+  
+  const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  }));
 
   // Filters State
   const [selectedZoneFilter, setSelectedZoneFilter] = useState('');
@@ -80,6 +89,9 @@ export default function App() {
     setSelectedSupervisorFilter('');
     setSelectedStatusFilter('');
     setActiveTab('dashboard');
+    setLastUpdated(new Date().toLocaleString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    }));
   };
 
   const handleDataUploaded = (processedData) => {
@@ -91,6 +103,15 @@ export default function App() {
     setSelectedChargeFilter('');
     setSelectedSupervisorFilter('');
     setSelectedStatusFilter('');
+    
+    const fileTime = processedData.length > 0 && processedData[0].date 
+      ? processedData[0].date 
+      : new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      
+    setLastUpdated(fileTime);
+    
+    // Save snapshot to local database for trend analysis
+    saveSnapshot(fileTime, processedData, results).catch(console.error);
   };
 
   // Filter application
@@ -159,6 +180,8 @@ export default function App() {
         hasData={rawCensusData.length > 0}
         isOpen={sidebarOpen}
         setIsOpen={setSidebarOpen}
+        isCollapsed={desktopSidebarCollapsed}
+        setIsCollapsed={setDesktopSidebarCollapsed}
       />
 
       {/* Mobile Backdrop Overlay */}
@@ -170,7 +193,7 @@ export default function App() {
       )}
 
       {/* Main Panel Shell */}
-      <div className="pl-0 lg:pl-64 flex flex-col min-h-screen transition-all duration-300">
+      <div className={`pl-0 ${desktopSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'} flex flex-col min-h-screen transition-all duration-300`}>
         
         {/* Top Navigation Bar */}
         <header className="no-print sticky top-0 z-10 flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-4 sm:px-8 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
@@ -195,9 +218,14 @@ export default function App() {
               <span className="text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">
                 Government of India • Janganana Bureau
               </span>
-              <h2 className="font-display text-sm font-bold text-slate-850 dark:text-slate-200 leading-none mt-0.5">
-                National Census Performance System
-              </h2>
+              <div className="flex items-center gap-3 mt-0.5">
+                <h2 className="font-display text-sm font-bold text-slate-850 dark:text-slate-200 leading-none">
+                  National Census Performance System
+                </h2>
+                <span className="hidden lg:inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                  Last Updated: {lastUpdated}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -322,7 +350,7 @@ export default function App() {
         </header>
 
         {/* Global Dashboard Filters Bar */}
-        {activeTab !== 'upload' && activeTab !== 'insights' && (
+        {activeTab !== 'upload' && activeTab !== 'insights' && activeTab !== 'contacts' && (
           <div className="no-print mx-6 mt-6 flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Filters:</span>
             
@@ -454,10 +482,20 @@ export default function App() {
               insights={currentAnalytics?.aiInsights}
             />
           )}
+
+          {activeTab === 'contacts' && (
+            <ContactReport 
+              data={filteredData}
+            />
+          )}
+
+          {activeTab === 'trends' && (
+            <TrendsDashboard />
+          )}
         </main>
 
         {/* PDF Executive Print-Only View */}
-        {currentAnalytics && (
+        {currentAnalytics && activeTab === 'dashboard' && (
           <div className="print-only hidden print-container p-8">
             {/* Report Header */}
             <div className="text-center border-b-2 border-slate-800 pb-4 mb-6">

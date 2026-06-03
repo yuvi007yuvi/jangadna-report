@@ -907,15 +907,19 @@ export default function PerformanceTables({
           { key: 'totalHlbs', label: 'Total HLBs', letter: 'D', align: 'right', numeric: true },
           { key: 'supervisorName', label: 'Supervisor Name', letter: 'E', align: 'left' },
           { key: 'expectedHouses', label: 'Expected Houses', letter: 'F', align: 'right', numeric: true },
-          { key: 'status', label: 'Status', letter: 'G', align: 'center' }
         ] : [
           { key: 'hlbId', label: 'HLB ID', letter: 'A', align: 'left' },
-          { key: 'chargeName', label: 'Area Name', letter: 'B', align: 'left' },
-          { key: 'zone', label: 'Zone', letter: 'C', align: 'center' },
-          { key: 'supervisorName', label: 'Supervisor', letter: 'D', align: 'left' },
-          { key: 'enumeratorName', label: 'Enumerator', letter: 'E', align: 'left' },
-          { key: 'expectedHouses', label: 'Expected Houses', letter: 'F', align: 'right', numeric: true },
-          { key: 'status', label: 'Status', letter: 'G', align: 'center' }
+          { key: 'chargeName', label: 'Charge Name', letter: 'B', align: 'left' },
+          { key: 'city', label: 'City', letter: 'C', align: 'center' },
+          { key: 'zone', label: 'Zone', letter: 'D', align: 'center' },
+          { key: 'ward', label: 'Ward', letter: 'E', align: 'center' },
+          { key: 'area', label: 'Area', letter: 'F', align: 'left' },
+          { key: 'supervisorName', label: 'Supervisor', letter: 'G', align: 'left' },
+          { key: 'supervisorNumber', label: 'Supervisor No.', letter: 'H', align: 'left' },
+          { key: 'enumeratorName', label: 'Enumerator', letter: 'I', align: 'left' },
+          { key: 'enumeratorNumber', label: 'Enumerator No.', letter: 'J', align: 'left' },
+          { key: 'expectedHouses', label: 'Expected Houses', letter: 'K', align: 'right', numeric: true },
+          { key: 'status', label: 'Status', letter: 'L', align: 'center' }
         ];
 
         return (

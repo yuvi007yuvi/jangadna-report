@@ -12,6 +12,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { WARD_MAPPING } from '../utils/wardMapping';
+import { STAFF_MAPPING } from '../utils/staffMapping';
 
 const REQUIRED_FIELDS = [
   { key: 'chargeId', label: 'Charge ID / Code', description: 'Unique identifier for the area' },
@@ -125,19 +126,44 @@ export default function FileUpload({ onDataLoaded, onLoadDemoData }) {
             const hlbIdVal = String(row['HLBs'] || '').trim();
             if (!hlbIdVal) return;
 
-            // Extract digits to construct standardized Charge ID using ward mapping
-            const cleanWard = wardNoVal.replace(/[^0-9]/g, '');
-            const wardIndex = parseInt(cleanWard, 10) || 1;
+            // Match HLB number after 15 characters (words) and use 4 numbers (ignoring last 2 zeros)
+            let coreHlb = hlbIdVal;
+            if (hlbIdVal.length >= 19) {
+              // Extract exactly 4 digits after the first 15 characters
+              coreHlb = hlbIdVal.substring(15, 19);
+            } else {
+              // Fallback for differently formatted HLBs
+              let cleanHlb = hlbIdVal;
+              if (cleanHlb.endsWith('00') && cleanHlb.length > 6) {
+                cleanHlb = cleanHlb.slice(0, -2);
+              }
+              coreHlb = cleanHlb.slice(-4).padStart(4, '0');
+            }
+
+            let wardIndex = parseInt(coreHlb, 10);
+
+            // Fallback to ward column if HLB matching fails or isn't in mapping
+            if (!wardIndex || !WARD_MAPPING[String(wardIndex)]) {
+              const cleanWard = wardNoVal.replace(/[^0-9]/g, '');
+              wardIndex = parseInt(cleanWard, 10) || 1;
+            }
+
             const wardInfo = WARD_MAPPING[String(wardIndex)];
-            const chargeId = `1000000721650` + String(wardIndex).padStart(2, '0'); // Wait, let's keep standardized prefix or dynamic ward prefix
-            // Wait, let's keep the chargeId standard format from excel which is 1000000721600 + 2-digit wardIndex
             const standardChargeId = `1000000721600` + String(wardIndex).padStart(2, '0');
             const chargeName = wardInfo ? `${wardInfo.area} (${wardInfo.zone})` : `Mathura Vrindavan Ward ${wardIndex}`;
 
-            // Strict derived labels instead of mock human names
-            const supervisorName = wardInfo ? `Supervisor (Zone ${wardInfo.zone})` : `Supervisor (Ward ${wardIndex})`;
+            const staffInfo = STAFF_MAPPING[coreHlb] || STAFF_MAPPING[parseInt(coreHlb, 10).toString()];
+
+            // Strict derived labels using Staff Mapping as primary fallback
+            const supervisorName = String(row['Supervisor Name'] || row['Supervisor'] || (staffInfo ? staffInfo.supervisor : (wardInfo ? `Supervisor (Zone ${wardInfo.zone})` : `Supervisor (Ward ${wardIndex})`))).trim();
+            const supervisorNumber = String(row['Supervisor Number'] || row['Supervisor Mobile'] || row['Supervisor Contact'] || (staffInfo ? staffInfo.supervisorMobile : '')).trim();
             const shortHlb = hlbIdVal.substring(hlbIdVal.length - 5) || hlbIdVal;
-            const enumeratorName = `Enumerator (Block ${shortHlb})`;
+            const enumeratorName = String(row['Enumerator Name'] || row['Enumerator'] || (staffInfo ? staffInfo.enumerator : `Enumerator (Block ${shortHlb})`)).trim();
+            const enumeratorNumber = String(row['Enumerator Number'] || row['Enumerator Mobile'] || row['Enumerator Contact'] || (staffInfo ? staffInfo.enumeratorMobile : '')).trim();
+            
+            const supervisorCircle = staffInfo?.supervisorCircle || '';
+            const originalHlbCode = staffInfo?.originalHlbCode || coreHlb;
+            const villageWard = staffInfo?.villageWard || '';
 
             // Resolve progress status flags
             let status = 'Yet To Start';
@@ -160,7 +186,12 @@ export default function FileUpload({ onDataLoaded, onLoadDemoData }) {
               chargeName,
               hlbId: hlbIdVal,
               supervisorName,
+              supervisorNumber,
+              supervisorCircle,
               enumeratorName,
+              enumeratorNumber,
+              originalHlbCode,
+              villageWard,
               expectedHouses: Math.max(0, parseInt(row['Total Expected Census Houses']) || 0),
               surveyedHouses: Math.max(0, parseInt(row['Total Number of Census Houses']) || 0),
               totalHouseholds: Math.max(0, parseInt(row['Total number of Households']) || 0),
@@ -168,8 +199,11 @@ export default function FileUpload({ onDataLoaded, onLoadDemoData }) {
               totalPopulation: Math.max(0, parseInt(row['Total Population']) || 0),
               status,
               zone: wardInfo ? wardInfo.zone : 'Unknown',
+              area: wardInfo ? wardInfo.area : 'Unknown',
+              city: 'Mathura',
+              ward: wardIndex,
               isChargeLevel: false,
-              date: row['Refreshed Date'] || new Date().toISOString().split('T')[0]
+              date: row['Refreshed Time'] || row['Refreshed Date'] || new Date().toISOString().split('T')[0]
             });
           });
 
@@ -233,7 +267,7 @@ export default function FileUpload({ onDataLoaded, onLoadDemoData }) {
               status: 'In Progress',
               zone: wardInfo ? wardInfo.zone : 'Unknown',
               isChargeLevel: true,
-              date: row['Refreshed Date'] || new Date().toISOString().split('T')[0]
+              date: row['Refreshed Time'] || row['Refreshed Date'] || new Date().toISOString().split('T')[0]
             });
           });
 
@@ -296,7 +330,7 @@ export default function FileUpload({ onDataLoaded, onLoadDemoData }) {
         verifiedHouseholds: Math.max(0, parseInt(row[currentMapping.verifiedHouseholds]) || 0),
         status,
         zone: wardInfo ? wardInfo.zone : 'Unknown',
-        date: row.date || new Date().toISOString().split('T')[0]
+        date: row['Refreshed Time'] || row['Refreshed Date'] || row.date || new Date().toISOString().split('T')[0]
       };
     });
   };
