@@ -13,10 +13,11 @@ import {
   ShieldCheck,
   AlertTriangle,
   PieChart,
-  BarChart2
+  BarChart2,
+  Settings2
 } from 'lucide-react';
 
-export default function DashboardOverview({ summary, nonPerformingCount, setActiveTab }) {
+export default function DashboardOverview({ summary, nonPerformingCount, setActiveTab, capProgressAt100, setCapProgressAt100 }) {
   if (!summary) return null;
 
   const kpis = [
@@ -167,21 +168,35 @@ export default function DashboardOverview({ summary, nonPerformingCount, setActi
       {/* Completion Analysis Dashboard */}
       {summary.progressBreakdown && (
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 mt-6">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400">
-              <PieChart className="h-5 w-5" />
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400">
+                <PieChart className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-display text-lg font-bold text-slate-800 dark:text-white">
+                  Completion Analysis
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Breakdown of enumerators by their current survey progress
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="font-display text-lg font-bold text-slate-800 dark:text-white">
-                Completion Analysis
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Breakdown of enumerators by their current survey progress
-              </p>
+
+            <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                Cap Progress at 100%
+              </span>
+              <button 
+                onClick={() => setCapProgressAt100(!capProgressAt100)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${capProgressAt100 ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+              >
+                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${capProgressAt100 ? 'translate-x-4.5' : 'translate-x-1'}`} style={{ transform: capProgressAt100 ? 'translateX(18px)' : 'translateX(4px)' }} />
+              </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
+          <div className={`grid grid-cols-2 gap-4 sm:grid-cols-4 ${capProgressAt100 ? 'lg:grid-cols-7' : 'lg:grid-cols-8'}`}>
             {[
               { label: 'Total Enumerators', value: summary.totalHlbs, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20' },
               { label: '0%', value: summary.progressBreakdown['0%'], color: 'text-slate-500', bg: 'bg-slate-100 dark:bg-slate-800' },
@@ -189,8 +204,8 @@ export default function DashboardOverview({ summary, nonPerformingCount, setActi
               { label: '26 - 50%', value: summary.progressBreakdown['26-50%'], color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/20' },
               { label: '51 - 75%', value: summary.progressBreakdown['51-75%'], color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/20' },
               { label: '76 - 99%', value: summary.progressBreakdown['76-99%'], color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-              { label: 'Exactly 100%', value: summary.progressBreakdown['100%'], color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-              { label: 'Exceeded (>100%)', value: summary.progressBreakdown['>100%'], color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-50 dark:bg-teal-900/20' }
+              { label: capProgressAt100 ? '100% Completed' : 'Exactly 100%', value: summary.progressBreakdown['100%'], color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+              ...(capProgressAt100 ? [] : [{ label: 'Exceeded (>100%)', value: summary.progressBreakdown['>100%'], color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-50 dark:bg-teal-900/20' }])
             ].map((stat, idx) => (
               <div key={idx} className={`flex flex-col items-center justify-center rounded-xl p-4 text-center transition-transform hover:scale-105 ${stat.bg}`}>
                 <span className={`text-3xl font-black ${stat.color}`}>

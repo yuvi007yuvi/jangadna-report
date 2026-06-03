@@ -10,7 +10,7 @@ const toTitleCase = (str) => {
   return str.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 };
 
-export default function ContactReport({ data = [] }) {
+export default function ContactReport({ data = [], capProgressAt100 = false }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -20,7 +20,10 @@ export default function ContactReport({ data = [] }) {
   const [circleFilter, setCircleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [progressFilter, setProgressFilter] = useState('');
+  const [minProgress, setMinProgress] = useState('');
+  const [maxProgress, setMaxProgress] = useState('');
   const [feedingFilter, setFeedingFilter] = useState('');
+  const [showAnomalies, setShowAnomalies] = useState(false);
 
   // Filter to include only non-charge-level data for enumerator mapping
   const hlbData = data.filter(item => !item.isChargeLevel);
@@ -45,8 +48,18 @@ export default function ContactReport({ data = [] }) {
     const matchesCircle = circleFilter ? String(item.supervisorCircle) === String(circleFilter) : true;
     const matchesStatus = statusFilter ? item.status === statusFilter : true;
     
-    const progressPercent = item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0;
     let matchesProgress = true;
+    let progressPercent = item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0;
+    
+    // Anomaly filter: >=100% progress but not completed
+    if (showAnomalies) {
+      if (!(progressPercent >= 100 && item.status !== 'Completed')) {
+        return false;
+      }
+    }
+
+    if (capProgressAt100) progressPercent = Math.min(100, progressPercent);
+
     if (progressFilter) {
       if (progressFilter === '0') matchesProgress = progressPercent === 0;
       else if (progressFilter === '1-25') matchesProgress = progressPercent > 0 && progressPercent <= 25;
@@ -54,6 +67,14 @@ export default function ContactReport({ data = [] }) {
       else if (progressFilter === '51-75') matchesProgress = progressPercent > 50 && progressPercent <= 75;
       else if (progressFilter === '76-99') matchesProgress = progressPercent > 75 && progressPercent < 100;
       else if (progressFilter === '100') matchesProgress = progressPercent === 100;
+      else if (progressFilter === '>100') matchesProgress = progressPercent > 100;
+    }
+
+    if (minProgress !== '') {
+      if (progressPercent < Number(minProgress)) matchesProgress = false;
+    }
+    if (maxProgress !== '') {
+      if (progressPercent > Number(maxProgress)) matchesProgress = false;
     }
 
     const feeding = item.surveyedHouses;
@@ -80,10 +101,10 @@ export default function ContactReport({ data = [] }) {
     if (filteredData.length === 0) return;
     const exportData = filteredData.map((item, index) => ({
       'Sr. No.': index + 1,
-      'Charge ID': item.chargeId,
-      'Uploaded HLB': item.hlbId,
+      'Charge ID': item.chargeId || '',
+      'HLB': item.hlbId || '',
       'Map HLB Code': item.originalHlbCode || '',
-      'Village/Ward Name': item.villageWard || '',
+      'Village/Ward': item.villageWard || '',
       'Area': item.area,
       'Supervisor Circle': item.supervisorCircle || '',
       'Supervisor Name': toTitleCase(item.supervisorName),
@@ -92,7 +113,10 @@ export default function ContactReport({ data = [] }) {
       'Enumerator No.': item.enumeratorNumber || '',
       'Expected': item.expectedHouses,
       'Feeding': item.surveyedHouses,
-      'Progress %': item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) + '%' : '0%'
+      'Progress %': (capProgressAt100 
+        ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
+        : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0)) + '%',
+      'Status': item.status || 'Yet To Start'
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -103,12 +127,12 @@ export default function ContactReport({ data = [] }) {
 
   const exportToCSV = () => {
     if (filteredData.length === 0) return;
-    const headers = ['Sr. No.', 'Charge ID', 'Uploaded HLB', 'Map HLB Code', 'Village/Ward Name', 'Area', 'Supervisor Circle', 'Supervisor Name', 'Supervisor No.', 'Enumerator Name', 'Enumerator No.', 'Expected', 'Feeding', 'Progress %'];
+    const headers = ['Sr. No.', 'Charge ID', 'HLB', 'Map HLB Code', 'Village/Ward Name', 'Area', 'Sup. Circle', 'Supervisor Name', 'Sup. No.', 'Enumerator Name', 'Enum. No.', 'Expected', 'Feeding', 'Progress %', 'Status'];
     
     const rows = filteredData.map((item, index) => [
       index + 1,
-      item.chargeId,
-      item.hlbId,
+      item.chargeId || '',
+      item.hlbId || '',
       item.originalHlbCode || '',
       item.villageWard || '',
       item.area,
@@ -119,7 +143,10 @@ export default function ContactReport({ data = [] }) {
       item.enumeratorNumber || '',
       item.expectedHouses,
       item.surveyedHouses,
-      item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) + '%' : '0%'
+      (capProgressAt100 
+        ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
+        : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0)) + '%',
+      item.status || 'Yet To Start'
     ]);
 
     const csvContent = [
@@ -140,7 +167,6 @@ export default function ContactReport({ data = [] }) {
   const exportToPDF = async () => {
     if (filteredData.length === 0) return;
     
-    // Default landscape format: a4
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
     
@@ -158,28 +184,25 @@ export default function ContactReport({ data = [] }) {
       canvas.height = img.height;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0);
-      // Maintain aspect ratio while making it larger
+      const dataUrl = canvas.toDataURL('image/png');
       const aspectRatio = img.width / img.height;
       const targetHeight = 24;
       const targetWidth = targetHeight * aspectRatio;
-
-      // Place logo slightly to the left of the center title
       doc.addImage(dataUrl, 'PNG', (pageWidth / 2) - 85, 6, targetWidth, targetHeight);
     } catch (e) {
       console.log('Could not load logo for PDF', e);
     }
     
     doc.setFontSize(22);
-    doc.setTextColor(30, 41, 59); // slate-800
+    doc.setTextColor(30, 41, 59);
     doc.setFont(undefined, 'bold');
     doc.text("CENSUS OF INDIA 2027", (pageWidth / 2) + 5, 20, { align: 'center' });
     
     doc.setFontSize(10);
-    doc.setTextColor(100, 116, 139); // slate-500
+    doc.setTextColor(100, 116, 139);
     doc.setFont(undefined, 'bold');
     doc.text("GOVERNMENT OF INDIA • NATIONAL CENSUS", (pageWidth / 2) + 5, 26, { align: 'center' });
     
-    // Divider line
     doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.5);
     doc.line(14, 32, pageWidth - 14, 32);
@@ -190,11 +213,11 @@ export default function ContactReport({ data = [] }) {
     doc.text("FIELD CONTACTS & ENUMERATION PROGRESS REPORT", pageWidth / 2, 40, { align: 'center' });
 
     doc.setFontSize(8);
-    doc.setTextColor(100, 116, 139); // slate-500
+    doc.setTextColor(100, 116, 139);
     doc.setFont(undefined, 'normal');
     doc.text(`Data Refreshed: ${data.length > 0 && data[0].date ? data[0].date : new Date().toLocaleDateString('en-IN')}`, pageWidth / 2, 45, { align: 'center' });
     
-    const tableHeaders = [['Sr. No.', 'Charge ID', 'Uploaded HLB', 'Map HLB', 'Village/Ward', 'Area', 'Sup. Circle', 'Supervisor Name', 'Sup. No.', 'Enumerator Name', 'Enum. No.', 'Expected', 'Feeding', 'Progress']];
+    const tableHeaders = [['Sr. No.', 'Charge ID', 'HLB', 'Map HLB', 'Village/Ward', 'Area', 'Sup. Circle', 'Supervisor Name', 'Sup. No.', 'Enumerator Name', 'Enum. No.', 'Expected', 'Feeding', 'Progress', 'Status']];
     
     const tableData = filteredData.map((item, index) => [
       index + 1,
@@ -210,7 +233,10 @@ export default function ContactReport({ data = [] }) {
       item.enumeratorNumber || '-',
       item.expectedHouses || '0',
       item.surveyedHouses || '0',
-      (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0) + '%'
+      (capProgressAt100 
+        ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
+        : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0)) + '%',
+      item.status || 'Yet To Start'
     ]);
 
     autoTable(doc, {
@@ -219,34 +245,11 @@ export default function ContactReport({ data = [] }) {
       startY: 50,
       theme: 'grid',
       margin: { left: 5, right: 5, top: 10, bottom: 10 },
-      styles: {
-        fontSize: 6,
-        cellPadding: 1.5,
-        valign: 'middle',
-        halign: 'center',
-        lineWidth: 0.1,
-        lineColor: [226, 232, 240], // slate-200
-        textColor: [51, 65, 85], // slate-700
-      },
-      headStyles: {
-        fillColor: [30, 41, 59], // slate-800 (Premium dark header)
-        textColor: [255, 255, 255], // white
-        fontStyle: 'bold',
-        halign: 'center',
-        lineWidth: 0.1,
-        lineColor: [15, 23, 42],
-      },
-      alternateRowStyles: {
-        fillColor: [248, 250, 252], // slate-50 (Subtle alternating rows)
-      },
-      columnStyles: {
-        0: { halign: 'center', cellWidth: 10 },
-        11: { halign: 'right', cellWidth: 15 },
-        12: { halign: 'right', cellWidth: 15, fontStyle: 'bold', textColor: [29, 78, 216] }, // blue-700
-        13: { halign: 'right', cellWidth: 15, fontStyle: 'bold' }
-      },
+      styles: { fontSize: 6, cellPadding: 1.5, valign: 'middle', halign: 'center', lineWidth: 0.1, lineColor: [226, 232, 240], textColor: [51, 65, 85] },
+      headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', lineWidth: 0.1, lineColor: [15, 23, 42] },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: { 0: { halign: 'center', cellWidth: 10 }, 11: { halign: 'right', cellWidth: 15 }, 12: { halign: 'right', cellWidth: 15, fontStyle: 'bold', textColor: [29, 78, 216] }, 13: { halign: 'right', cellWidth: 15, fontStyle: 'bold' }, 14: { halign: 'center', cellWidth: 15 } },
       didDrawPage: function (data) {
-        // Footer text
         let str = 'Page ' + doc.internal.getNumberOfPages();
         doc.setFontSize(8);
         const pageSize = doc.internal.pageSize;
@@ -263,63 +266,31 @@ export default function ContactReport({ data = [] }) {
       <style>{`
         @media print {
           @page { size: landscape; margin: 6mm; }
-          body { 
-            -webkit-print-color-adjust: exact; 
-            print-color-adjust: exact; 
-            font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
-          }
-          table { 
-            width: 100% !important; 
-            max-width: 100% !important; 
-            border-collapse: collapse !important;
-          }
-          th, td { 
-            padding: 4px 3px !important; 
-            white-space: normal !important; 
-            border: 1px solid #cbd5e1 !important;
-            vertical-align: middle !important;
-          }
-          th {
-            font-size: 10px !important;
-            font-weight: 800 !important;
-            background-color: #f8fafc !important;
-            color: #0f172a !important;
-            /* Prevent breaking mid-word in headers */
-            word-break: normal !important;
-            overflow-wrap: normal !important;
-          }
-          td {
-            font-size: 10px !important;
-            color: #1e293b !important;
-            word-wrap: break-word !important;
-            overflow-wrap: break-word !important;
-            line-height: 1.4 !important;
-          }
-          
-          /* Force break on long numbers only */
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: 'Inter', system-ui, -apple-system, sans-serif !important; }
+          table { width: 100% !important; max-width: 100% !important; border-collapse: collapse !important; }
+          th, td { padding: 4px 3px !important; white-space: normal !important; border: 1px solid #cbd5e1 !important; vertical-align: middle !important; }
+          th { font-size: 10px !important; font-weight: 800 !important; background-color: #f8fafc !important; color: #0f172a !important; word-break: normal !important; overflow-wrap: normal !important; }
+          td { font-size: 10px !important; color: #1e293b !important; word-wrap: break-word !important; overflow-wrap: break-word !important; line-height: 1.4 !important; }
           td:nth-child(2), td:nth-child(3) { word-break: break-all !important; }
-          
-          /* Optimized Column Widths */
-          th:nth-child(1), td:nth-child(1) { width: 3.5%; text-align: center !important; } /* Sr No */
-          th:nth-child(2), td:nth-child(2) { width: 8.5%; } /* Charge ID */
-          th:nth-child(3), td:nth-child(3) { width: 10%; } /* Uploaded HLB */
-          th:nth-child(4), td:nth-child(4) { width: 4.5%; }  /* Map HLB Code */
-          th:nth-child(5), td:nth-child(5) { width: 8.5%; }  /* Village/Ward */
-          th:nth-child(6), td:nth-child(6) { width: 9%; }  /* Area */
-          th:nth-child(7), td:nth-child(7) { width: 4.5%; }  /* Sup Circle */
-          th:nth-child(8), td:nth-child(8) { width: 10%; }  /* Supervisor Name */
-          th:nth-child(9), td:nth-child(9) { width: 7.5%; }  /* Sup No */
-          th:nth-child(10), td:nth-child(10) { width: 10%; }  /* Enum Name */
-          th:nth-child(11), td:nth-child(11) { width: 7.5%; }  /* Enum No */
-          th:nth-child(12), td:nth-child(12) { width: 5%; }  /* Expected */
-          th:nth-child(13), td:nth-child(13) { width: 5.5%; }  /* Feeding */
-          th:nth-child(14), td:nth-child(14) { width: 6%; }  /* Progress */
-          
+          th:nth-child(1), td:nth-child(1) { width: 3.5%; text-align: center !important; }
+          th:nth-child(2), td:nth-child(2) { width: 8.5%; }
+          th:nth-child(3), td:nth-child(3) { width: 10%; }
+          th:nth-child(4), td:nth-child(4) { width: 4.5%; }
+          th:nth-child(5), td:nth-child(5) { width: 8.5%; }
+          th:nth-child(6), td:nth-child(6) { width: 8%; }
+          th:nth-child(7), td:nth-child(7) { width: 4.5%; }
+          th:nth-child(8), td:nth-child(8) { width: 10%; }
+          th:nth-child(9), td:nth-child(9) { width: 7.5%; }
+          th:nth-child(10), td:nth-child(10) { width: 10%; }
+          th:nth-child(11), td:nth-child(11) { width: 7.5%; }
+          th:nth-child(12), td:nth-child(12) { width: 5%; }
+          th:nth-child(13), td:nth-child(13) { width: 5.5%; }
+          th:nth-child(14), td:nth-child(14) { width: 5%; }
+          th:nth-child(15), td:nth-child(15) { width: 8.5%; }
           .overflow-x-auto { overflow: visible !important; }
         }
       `}</style>
 
-      {/* Header section with Glassmorphism */}
       <div className="relative overflow-hidden rounded-2xl border border-slate-200/50 bg-white/70 p-6 shadow-sm backdrop-blur-xl dark:border-slate-800/50 dark:bg-slate-900/70 print:hidden">
         <div className="absolute top-0 right-0 -mr-20 -mt-20 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl dark:bg-blue-500/5"></div>
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -329,96 +300,47 @@ export default function ContactReport({ data = [] }) {
             </div>
             <div>
               <h2 className="font-display text-xl font-bold text-slate-800 dark:text-white">Field Contacts Directory</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Manage and view supervisor and enumerator contact details mapped across blocks.
-              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Manage and view supervisor and enumerator contact details mapped across blocks.</p>
             </div>
           </div>
           
           <div className="flex flex-col gap-3 w-full sm:w-auto items-end">
             <div className="flex gap-2 w-full sm:w-auto">
-              <button 
-                onClick={exportToExcel}
-                className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 text-xs font-bold shadow-sm shadow-emerald-500/20 transition-all"
-              >
-                <FileSpreadsheet className="h-4 w-4" />
-                Excel
-              </button>
-              <button 
-                onClick={exportToCSV}
-                className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 text-xs font-bold shadow-sm shadow-blue-500/20 transition-all"
-              >
-                <FileText className="h-4 w-4" />
-                CSV
-              </button>
-              <button 
-                onClick={exportToPDF}
-                className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl bg-red-500 hover:bg-red-600 text-white px-4 py-2 text-xs font-bold shadow-sm shadow-red-500/20 transition-all"
-              >
-                <Download className="h-4 w-4" />
-                Download PDF
-              </button>
-              <button 
-                onClick={() => window.print()}
-                className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 text-xs font-bold shadow-sm shadow-slate-800/20 dark:bg-slate-700 dark:hover:bg-slate-600 transition-all hidden sm:flex"
-              >
-                <FileText className="h-4 w-4" />
-                Print Layout
-              </button>
+              <button onClick={exportToExcel} className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 text-xs font-bold shadow-sm shadow-emerald-500/20 transition-all"><FileSpreadsheet className="h-4 w-4" />Excel</button>
+              <button onClick={exportToCSV} className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 text-xs font-bold shadow-sm shadow-blue-500/20 transition-all"><FileText className="h-4 w-4" />CSV</button>
+              <button onClick={exportToPDF} className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl bg-red-500 hover:bg-red-600 text-white px-4 py-2 text-xs font-bold shadow-sm shadow-red-500/20 transition-all"><Download className="h-4 w-4" />Download PDF</button>
+              <button onClick={() => window.print()} className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 text-xs font-bold shadow-sm shadow-slate-800/20 dark:bg-slate-700 dark:hover:bg-slate-600 transition-all hidden sm:flex"><FileText className="h-4 w-4" />Print Layout</button>
             </div>
             <div className="flex flex-wrap gap-2 w-full">
-              <select
-                value={zoneFilter}
-                onChange={(e) => { setZoneFilter(e.target.value); setCurrentPage(1); }}
-                className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-              >
+              <select value={zoneFilter} onChange={(e) => { setZoneFilter(e.target.value); setCurrentPage(1); }} className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                 <option value="">All Zones</option>
                 {uniqueZones.map(z => <option key={z} value={z}>{z}</option>)}
               </select>
-              <select
-                value={wardFilter}
-                onChange={(e) => { setWardFilter(e.target.value); setCurrentPage(1); }}
-                className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-              >
+              <select value={wardFilter} onChange={(e) => { setWardFilter(e.target.value); setCurrentPage(1); }} className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                 <option value="">All Wards</option>
                 {uniqueWards.map(w => <option key={w} value={w}>Ward {w}</option>)}
               </select>
-              <select
-                value={circleFilter}
-                onChange={(e) => { setCircleFilter(e.target.value); setCurrentPage(1); }}
-                className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-              >
+              <select value={circleFilter} onChange={(e) => { setCircleFilter(e.target.value); setCurrentPage(1); }} className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                 <option value="">All Sup. Circles</option>
                 {uniqueCircles.map(c => <option key={c} value={c}>Circle {c}</option>)}
               </select>
-              <select
-                value={statusFilter}
-                onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-              >
+              <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                 <option value="">All Progress Status</option>
                 <option value="Completed">Completed</option>
                 <option value="In Progress">In Progress</option>
                 <option value="Yet To Start">Yet To Start</option>
               </select>
-              <select
-                value={progressFilter}
-                onChange={(e) => { setProgressFilter(e.target.value); setCurrentPage(1); }}
-                className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-              >
+              <select value={progressFilter} onChange={(e) => { setProgressFilter(e.target.value); setCurrentPage(1); }} className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                 <option value="">All Progress %</option>
                 <option value="0">0%</option>
                 <option value="1-25">1% - 25%</option>
                 <option value="26-50">26% - 50%</option>
                 <option value="51-75">51% - 75%</option>
                 <option value="76-99">76% - 99%</option>
-                <option value="100">100%</option>
+                <option value="100">{capProgressAt100 ? '100% Completed' : 'Exactly 100%'}</option>
+                {!capProgressAt100 && <option value=">100">Exceeded (&gt;100%)</option>}
               </select>
-              <select
-                value={feedingFilter}
-                onChange={(e) => { setFeedingFilter(e.target.value); setCurrentPage(1); }}
-                className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-              >
+              <select value={feedingFilter} onChange={(e) => { setFeedingFilter(e.target.value); setCurrentPage(1); }} className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                 <option value="">All Feeding Counts</option>
                 <option value="0">0</option>
                 <option value="1-50">1 - 50</option>
@@ -426,6 +348,23 @@ export default function ContactReport({ data = [] }) {
                 <option value="101-200">101 - 200</option>
                 <option value="201+">201+</option>
               </select>
+              <div className="flex items-center gap-1">
+                <input 
+                  type="number" 
+                  placeholder="Min %" 
+                  value={minProgress}
+                  onChange={(e) => { setMinProgress(e.target.value); setCurrentPage(1); }}
+                  className="w-20 rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                />
+                <span className="text-slate-400 text-xs">-</span>
+                <input 
+                  type="number" 
+                  placeholder="Max %" 
+                  value={maxProgress}
+                  onChange={(e) => { setMaxProgress(e.target.value); setCurrentPage(1); }}
+                  className="w-20 rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                />
+              </div>
             </div>
             <div className="relative w-full max-w-sm sm:w-80">
               <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
@@ -439,17 +378,23 @@ export default function ContactReport({ data = [] }) {
                 className="w-full rounded-xl border border-slate-200 bg-white/50 py-2.5 pl-9 pr-4 text-xs text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200 dark:focus:bg-slate-800"
               />
             </div>
+            <div className="flex items-center ml-1 sm:ml-2">
+              <label className="flex items-center cursor-pointer relative group">
+                <input type="checkbox" className="sr-only peer" checked={showAnomalies} onChange={(e) => { setShowAnomalies(e.target.checked); setCurrentPage(1); }} />
+                <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-amber-500"></div>
+                <span className="ml-2 text-xs font-bold text-slate-600 group-hover:text-amber-600 peer-checked:text-amber-600 dark:text-slate-400 dark:peer-checked:text-amber-400 transition-colors">
+                  Show Anomalies (≥100% Not Completed)
+                </span>
+              </label>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Modern Spreadsheet Data Grid */}
       <div className="rounded border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden print:border-none print:shadow-none print:overflow-visible">
         
-        {/* Official Letterhead Header */}
         <div className="flex flex-col items-center justify-center p-8 border-b-4 border-double border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 print:bg-white print:border-none print:p-2 print:pb-4">
           
-          {/* Screen Layout */}
           <div className="flex items-center gap-6 mb-4 print:hidden">
             <img src="/logo.png" alt="Logo" className="w-24 h-24 object-contain drop-shadow-md" />
             <div className="text-center">
@@ -466,7 +411,6 @@ export default function ContactReport({ data = [] }) {
             </p>
           </div>
 
-          {/* Print Layout */}
           <div className="hidden print:flex w-full items-center justify-center gap-4 pb-2">
             <img src="/logo.png" alt="Logo" className="w-12 h-12 object-contain" />
             <div className="flex flex-col items-center">
@@ -486,7 +430,7 @@ export default function ContactReport({ data = [] }) {
               <tr>
                 <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4 text-center">Sr. No.</th>
                 <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4">Charge ID</th>
-                <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4">Uploaded HLB</th>
+                <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4">HLB</th>
                 <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4">Map HLB Code</th>
                 <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4">Village/Ward Name</th>
                 <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4">Area</th>
@@ -497,11 +441,11 @@ export default function ContactReport({ data = [] }) {
                 <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4">Enumerator No.</th>
                 <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4 text-right">Expected</th>
                 <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4 text-right">Feeding</th>
-                <th className="py-3 px-4 text-right">Progress %</th>
+                <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4 text-right">Progress %</th>
+                <th className="py-3 px-4 text-center">Status</th>
               </tr>
             </thead>
             
-            {/* Screen View: Paginated Data */}
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800 print:hidden">
               {paginatedData.length > 0 ? (
                 paginatedData.map((item, index) => {
@@ -521,15 +465,26 @@ export default function ContactReport({ data = [] }) {
                     <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-emerald-700 dark:text-emerald-500">{item.enumeratorNumber || '-'}</td>
                     <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 text-right font-mono font-medium">{item.expectedHouses}</td>
                     <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 text-right font-mono font-bold text-blue-700 dark:text-blue-400">{item.surveyedHouses}</td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-slate-700 dark:text-slate-300">
-                      {item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0}%
+                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 text-right font-mono font-bold text-slate-700 dark:text-slate-300">
+                      {(capProgressAt100 
+                        ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
+                        : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0))}%
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                        item.status === 'Completed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                        item.status === 'In Progress' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                        'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                      }`}>
+                        {item.status || 'Yet To Start'}
+                      </span>
                     </td>
                   </tr>
                 )})
 
               ) : (
                 <tr>
-                  <td colSpan="14" className="py-12 text-center text-slate-500 dark:text-slate-400">
+                  <td colSpan="15" className="py-12 text-center text-slate-500 dark:text-slate-400">
                     <div className="flex flex-col items-center gap-3">
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
                         <Users className="h-5 w-5 text-slate-400" />
@@ -541,7 +496,6 @@ export default function ContactReport({ data = [] }) {
               )}
             </tbody>
 
-            {/* Print View: Full Filtered Data */}
             <tbody className="hidden print:table-row-group print:divide-y print:divide-slate-400">
               {filteredData.length > 0 ? (
                 filteredData.map((item, index) => (
@@ -559,8 +513,13 @@ export default function ContactReport({ data = [] }) {
                     <td className="border-r print:border-slate-400 py-3 px-4 font-mono font-medium print:text-black">{item.enumeratorNumber || '-'}</td>
                     <td className="border-r print:border-slate-400 py-3 px-4 text-right font-mono font-medium print:text-black">{item.expectedHouses}</td>
                     <td className="border-r print:border-slate-400 py-3 px-4 text-right font-mono font-bold print:text-black">{item.surveyedHouses}</td>
-                    <td className="py-3 px-4 text-right font-mono font-bold print:text-black">
-                      {item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0}%
+                    <td className="border-r print:border-slate-400 py-3 px-4 text-right font-mono font-bold print:text-black">
+                      {(capProgressAt100 
+                        ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
+                        : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0))}%
+                    </td>
+                    <td className="py-3 px-4 text-center text-[10px] font-bold uppercase print:text-black">
+                      {item.status || 'Yet To Start'}
                     </td>
                   </tr>
                 ))

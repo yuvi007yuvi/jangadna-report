@@ -1,6 +1,6 @@
 // src/utils/analyticsEngine.js
 
-export const computeAnalytics = (rawHlbData) => {
+export const computeAnalytics = (rawHlbData, capProgressAt100 = false) => {
   if (!rawHlbData || rawHlbData.length === 0) {
     return null;
   }
@@ -68,7 +68,9 @@ export const computeAnalytics = (rawHlbData) => {
       }
 
       // Progress breakdown
-      const progressPercent = expected > 0 ? Math.round((surveyed / expected) * 100) : 0;
+      let progressPercent = expected > 0 ? Math.round((surveyed / expected) * 100) : 0;
+      if (capProgressAt100) progressPercent = Math.min(100, progressPercent);
+
       if (progressPercent === 0) progressBreakdown['0%']++;
       else if (progressPercent > 0 && progressPercent <= 25) progressBreakdown['1-25%']++;
       else if (progressPercent > 25 && progressPercent <= 50) progressBreakdown['26-50%']++;
