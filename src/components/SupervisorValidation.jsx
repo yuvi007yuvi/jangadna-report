@@ -22,10 +22,61 @@ export default function SupervisorValidation({ rawCensusData }) {
   const [success, setSuccess] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all'); // 'all', 'mismatch', 'match'
-  const [minProgress, setMinProgress] = useState('');
-  const [maxProgress, setMaxProgress] = useState('');
+  const [minDifference, setMinDifference] = useState('');
+  const [maxDifference, setMaxDifference] = useState('');
   const [viewMode, setViewMode] = useState('supervisor'); // 'hlb', 'supervisor'
-  const [sortOrder, setSortOrder] = useState('default'); // 'default', 'asc', 'desc'
+  
+  const [sortConfig, setSortConfig] = useState({ key: 'default', direction: 'asc' });
+
+  const requestSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getDropdownSortValue = () => {
+    if (sortConfig.key === 'default') return 'default';
+    if (sortConfig.key === 'supervisor') {
+      return sortConfig.direction === 'asc' ? 'asc' : 'desc';
+    }
+    if (sortConfig.key === 'difference') {
+      return sortConfig.direction === 'desc' ? 'diff-desc' : 'diff-asc';
+    }
+    return 'custom';
+  };
+
+  const handleDropdownSortChange = (value) => {
+    if (value === 'default') {
+      setSortConfig({ key: 'default', direction: 'asc' });
+    } else if (value === 'asc') {
+      setSortConfig({ key: 'supervisor', direction: 'asc' });
+    } else if (value === 'desc') {
+      setSortConfig({ key: 'supervisor', direction: 'desc' });
+    } else if (value === 'diff-desc') {
+      setSortConfig({ key: 'difference', direction: 'desc' });
+    } else if (value === 'diff-asc') {
+      setSortConfig({ key: 'difference', direction: 'asc' });
+    }
+  };
+
+  const renderSortableHeader = (label, key, additionalClasses = '') => {
+    const isSorted = sortConfig.key === key;
+    return (
+      <th
+        onClick={() => requestSort(key)}
+        className={`px-4 py-3 border border-slate-200 dark:border-slate-700 text-center cursor-pointer select-none group transition hover:bg-slate-200 dark:hover:bg-slate-800 ${additionalClasses}`}
+      >
+        <div className="flex items-center justify-center gap-1">
+          <span>{label}</span>
+          <span className={`text-xs transition-opacity duration-150 ${isSorted ? 'opacity-100 text-gov-600 dark:text-gov-400 font-extrabold' : 'opacity-0 group-hover:opacity-60 text-slate-400'}`}>
+            {isSorted ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲'}
+          </span>
+        </div>
+      </th>
+    );
+  };
 
   const fileInputRef = useRef(null);
 
@@ -167,88 +218,133 @@ export default function SupervisorValidation({ rawCensusData }) {
       else if (filterType === 'match') matchesFilter = !row.isMismatch && row.masterRecord;
       else if (filterType === 'unmatched') matchesFilter = !row.masterRecord;
 
-      let matchesProgress = true;
-      const progress = row.excelExpected > 0 ? (row.excelVerified / row.excelExpected) * 100 : 0;
-      if (minProgress !== '') {
-        const minVal = parseFloat(minProgress);
+      let matchesDifference = true;
+      const difference = row.excelDifference;
+      if (minDifference !== '') {
+        const minVal = parseInt(minDifference);
         if (!isNaN(minVal)) {
-          matchesProgress = matchesProgress && progress >= minVal;
+          matchesDifference = matchesDifference && difference >= minVal;
         }
       }
-      if (maxProgress !== '') {
-        const maxVal = parseFloat(maxProgress);
+      if (maxDifference !== '') {
+        const maxVal = parseInt(maxDifference);
         if (!isNaN(maxVal)) {
-          matchesProgress = matchesProgress && progress <= maxVal;
+          matchesDifference = matchesDifference && difference <= maxVal;
         }
       }
 
-      return matchesSearch && matchesFilter && matchesProgress;
+      return matchesSearch && matchesFilter && matchesDifference;
     });
 
-    if (sortOrder === 'asc') {
-      filtered.sort((a, b) => (a.masterSupervisor || '').localeCompare(b.masterSupervisor || ''));
-    } else if (sortOrder === 'desc') {
-      filtered.sort((a, b) => (b.masterSupervisor || '').localeCompare(a.masterSupervisor || ''));
-    } else if (sortOrder === 'progress-asc') {
+    if (sortConfig.key !== 'default') {
       filtered.sort((a, b) => {
-        const pA = a.excelExpected > 0 ? a.excelVerified / a.excelExpected : 0;
-        const pB = b.excelExpected > 0 ? b.excelVerified / b.excelExpected : 0;
-        return pA - pB;
-      });
-    } else if (sortOrder === 'progress-desc') {
-      filtered.sort((a, b) => {
-        const pA = a.excelExpected > 0 ? a.excelVerified / a.excelExpected : 0;
-        const pB = b.excelExpected > 0 ? b.excelVerified / b.excelExpected : 0;
-        return pB - pA;
+        let valA, valB;
+        if (sortConfig.key === 'supervisor') {
+          valA = a.masterSupervisor || '';
+          valB = b.masterSupervisor || '';
+        } else if (sortConfig.key === 'hlb') {
+          valA = a.hlbId || '';
+          valB = b.hlbId || '';
+        } else if (sortConfig.key === 'ward') {
+          valA = parseInt(a.wardNo) || 0;
+          valB = parseInt(b.wardNo) || 0;
+        } else if (sortConfig.key === 'circle') {
+          valA = a.masterSupervisorCircle || '';
+          valB = b.masterSupervisorCircle || '';
+        } else if (sortConfig.key === 'expected') {
+          valA = a.excelExpected || 0;
+          valB = b.excelExpected || 0;
+        } else if (sortConfig.key === 'verified') {
+          valA = a.excelVerified || 0;
+          valB = b.excelVerified || 0;
+        } else if (sortConfig.key === 'difference') {
+          valA = a.excelDifference || 0;
+          valB = b.excelDifference || 0;
+        } else if (sortConfig.key === 'progress') {
+          valA = a.excelExpected > 0 ? (a.excelVerified / a.excelExpected) * 100 : 0;
+          valB = b.excelExpected > 0 ? (b.excelVerified / b.excelExpected) * 100 : 0;
+        }
+
+        if (valA === valB) return 0;
+        if (typeof valA === 'string') {
+          return sortConfig.direction === 'asc'
+            ? valA.localeCompare(valB)
+            : valB.localeCompare(valA);
+        } else {
+          return sortConfig.direction === 'asc'
+            ? valA - valB
+            : valB - valA;
+        }
       });
     }
 
     return filtered;
-  }, [fileData, searchTerm, filterType, minProgress, maxProgress, sortOrder]);
+  }, [fileData, searchTerm, filterType, minDifference, maxDifference, sortConfig]);
 
   const filteredSupervisors = useMemo(() => {
     if (!fileData) return [];
     let filtered = fileData.supervisors.filter(sup => {
       const matchesSearch = sup.name.toLowerCase().includes(searchTerm.toLowerCase());
 
-      let matchesProgress = true;
-      const progress = sup.excelExpected > 0 ? (sup.excelVerified / sup.excelExpected) * 100 : 0;
-      if (minProgress !== '') {
-        const minVal = parseFloat(minProgress);
+      let matchesDifference = true;
+      const difference = sup.excelDifference;
+      if (minDifference !== '') {
+        const minVal = parseInt(minDifference);
         if (!isNaN(minVal)) {
-          matchesProgress = matchesProgress && progress >= minVal;
+          matchesDifference = matchesDifference && difference >= minVal;
         }
       }
-      if (maxProgress !== '') {
-        const maxVal = parseFloat(maxProgress);
+      if (maxDifference !== '') {
+        const maxVal = parseInt(maxDifference);
         if (!isNaN(maxVal)) {
-          matchesProgress = matchesProgress && progress <= maxVal;
+          matchesDifference = matchesDifference && difference <= maxVal;
         }
       }
 
-      return matchesSearch && matchesProgress;
+      return matchesSearch && matchesDifference;
     });
 
-    if (sortOrder === 'asc') {
-      filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    } else if (sortOrder === 'desc') {
-      filtered.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
-    } else if (sortOrder === 'progress-asc') {
+    if (sortConfig.key !== 'default') {
       filtered.sort((a, b) => {
-        const pA = a.excelExpected > 0 ? a.excelVerified / a.excelExpected : 0;
-        const pB = b.excelExpected > 0 ? b.excelVerified / b.excelExpected : 0;
-        return pA - pB;
-      });
-    } else if (sortOrder === 'progress-desc') {
-      filtered.sort((a, b) => {
-        const pA = a.excelExpected > 0 ? a.excelVerified / a.excelExpected : 0;
-        const pB = b.excelExpected > 0 ? b.excelVerified / b.excelExpected : 0;
-        return pB - pA;
+        let valA, valB;
+        if (sortConfig.key === 'supervisor') {
+          valA = a.name || '';
+          valB = b.name || '';
+        } else if (sortConfig.key === 'circle') {
+          valA = a.circle || '';
+          valB = b.circle || '';
+        } else if (sortConfig.key === 'totalHlbs') {
+          valA = a.hlbCount || 0;
+          valB = b.hlbCount || 0;
+        } else if (sortConfig.key === 'expected') {
+          valA = a.excelExpected || 0;
+          valB = b.excelExpected || 0;
+        } else if (sortConfig.key === 'verified') {
+          valA = a.excelVerified || 0;
+          valB = b.excelVerified || 0;
+        } else if (sortConfig.key === 'difference') {
+          valA = a.excelDifference || 0;
+          valB = b.excelDifference || 0;
+        } else if (sortConfig.key === 'progress') {
+          valA = a.excelExpected > 0 ? (a.excelVerified / a.excelExpected) * 100 : 0;
+          valB = b.excelExpected > 0 ? (b.excelVerified / b.excelExpected) * 100 : 0;
+        }
+
+        if (valA === valB) return 0;
+        if (typeof valA === 'string') {
+          return sortConfig.direction === 'asc'
+            ? valA.localeCompare(valB)
+            : valB.localeCompare(valA);
+        } else {
+          return sortConfig.direction === 'asc'
+            ? valA - valB
+            : valB - valA;
+        }
       });
     }
 
     return filtered;
-  }, [fileData, searchTerm, minProgress, maxProgress, sortOrder]);
+  }, [fileData, searchTerm, minDifference, maxDifference, sortConfig]);
 
   const supervisorTotals = useMemo(() => {
     if (!filteredSupervisors) return null;
@@ -392,40 +488,38 @@ export default function SupervisorValidation({ rawCensusData }) {
 
               {/* Sort Dropdown */}
               <select
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
+                value={getDropdownSortValue()}
+                onChange={(e) => handleDropdownSortChange(e.target.value)}
                 className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium outline-none transition focus:border-gov-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
               >
                 <option value="default">Default Sort</option>
-                <option value="asc">A to Z</option>
-                <option value="desc">Z to A</option>
-                <option value="progress-desc">Progress (High to Low)</option>
-                <option value="progress-asc">Progress (Low to High)</option>
+                <option value="asc">A to Z (Supervisor)</option>
+                <option value="desc">Z to A (Supervisor)</option>
+                <option value="diff-desc">Difference (High to Low)</option>
+                <option value="diff-asc">Difference (Low to High)</option>
+                {getDropdownSortValue() === 'custom' && (
+                  <option value="custom">Custom Column Sort</option>
+                )}
               </select>
 
-              {/* Progress Range Filter: Min to Max */}
+              {/* Difference Range Filter: Min to Max */}
               <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 h-10 dark:border-slate-800 dark:bg-slate-900">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Progress:</span>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Difference:</span>
                 <input
                   type="number"
-                  min="0"
-                  max="100"
                   placeholder="Min"
-                  value={minProgress}
-                  onChange={(e) => setMinProgress(e.target.value)}
+                  value={minDifference}
+                  onChange={(e) => setMinDifference(e.target.value)}
                   className="w-12 h-7 text-center text-xs font-bold rounded-lg border border-slate-200 bg-slate-50 outline-none transition focus:border-gov-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <span className="text-xs text-slate-400 font-medium">to</span>
                 <input
                   type="number"
-                  min="0"
-                  max="100"
                   placeholder="Max"
-                  value={maxProgress}
-                  onChange={(e) => setMaxProgress(e.target.value)}
+                  value={maxDifference}
+                  onChange={(e) => setMaxDifference(e.target.value)}
                   className="w-12 h-7 text-center text-xs font-bold rounded-lg border border-slate-200 bg-slate-50 outline-none transition focus:border-gov-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
-                <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">%</span>
               </div>
 
               {viewMode === 'hlb' && (
@@ -478,15 +572,15 @@ export default function SupervisorValidation({ rawCensusData }) {
                   </tr>
                   <tr>
                     <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 w-16 text-center">Sr. No.</th>
-                    <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">HLB Code</th>
-                    <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">Ward</th>
-                    <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">Supervisor Name</th>
-                    <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">Circle</th>
+                    {renderSortableHeader('HLB Code', 'hlb')}
+                    {renderSortableHeader('Ward', 'ward')}
+                    {renderSortableHeader('Supervisor Name', 'supervisor')}
+                    {renderSortableHeader('Circle', 'circle')}
                     <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">Contact No.</th>
-                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300">Expected</th>
-                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300">Verified</th>
-                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">Difference</th>
-                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">Progress</th>
+                    {renderSortableHeader('Expected', 'expected', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300')}
+                    {renderSortableHeader('Verified', 'verified', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300')}
+                    {renderSortableHeader('Difference', 'difference')}
+                    {renderSortableHeader('Progress', 'progress')}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -551,14 +645,14 @@ export default function SupervisorValidation({ rawCensusData }) {
                   </tr>
                   <tr>
                     <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 w-16 text-center">Sr. No.</th>
-                    <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">Supervisor Name</th>
-                    <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">Circle</th>
+                    {renderSortableHeader('Supervisor Name', 'supervisor')}
+                    {renderSortableHeader('Circle', 'circle')}
                     <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">Contact No.</th>
-                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">Total HLBs</th>
-                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300">Expected</th>
-                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300">Verified</th>
-                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">Difference</th>
-                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">Progress</th>
+                    {renderSortableHeader('Total HLBs', 'totalHlbs')}
+                    {renderSortableHeader('Expected', 'expected', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300')}
+                    {renderSortableHeader('Verified', 'verified', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300')}
+                    {renderSortableHeader('Difference', 'difference')}
+                    {renderSortableHeader('Progress', 'progress')}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">

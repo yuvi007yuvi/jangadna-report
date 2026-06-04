@@ -10,6 +10,14 @@ const toTitleCase = (str) => {
   return str.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 };
 
+const getProgressBadgeClass = (progress) => {
+  if (progress >= 100) return "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-400 dark:border-emerald-800";
+  if (progress >= 95) return "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/50 dark:text-blue-400 dark:border-blue-800";
+  if (progress >= 50) return "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-400 dark:border-amber-800";
+  if (progress > 0) return "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-900/50 dark:text-rose-400 dark:border-rose-800";
+  return "bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700";
+};
+
 export default function ContactReport({ data = [], capProgressAt100 = false }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -24,7 +32,58 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
   const [maxProgress, setMaxProgress] = useState('');
   const [feedingFilter, setFeedingFilter] = useState('');
   const [showAnomalies, setShowAnomalies] = useState(false);
-  const [sortBy, setSortBy] = useState('default');
+  
+  const [sortConfig, setSortConfig] = useState({ key: 'default', direction: 'asc' });
+
+  const requestSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+    setCurrentPage(1);
+  };
+
+  const getDropdownSortValue = () => {
+    if (sortConfig.key === 'default') return 'default';
+    if (sortConfig.key === 'supervisor') {
+      return sortConfig.direction === 'asc' ? 'default' : 'supervisor_desc';
+    }
+    if (sortConfig.key === 'progress') {
+      return sortConfig.direction === 'asc' ? 'progress_asc' : 'progress_desc';
+    }
+    return 'custom';
+  };
+
+  const handleDropdownSortChange = (value) => {
+    if (value === 'default') {
+      setSortConfig({ key: 'default', direction: 'asc' });
+    } else if (value === 'supervisor_desc') {
+      setSortConfig({ key: 'supervisor', direction: 'desc' });
+    } else if (value === 'progress_asc') {
+      setSortConfig({ key: 'progress', direction: 'asc' });
+    } else if (value === 'progress_desc') {
+      setSortConfig({ key: 'progress', direction: 'desc' });
+    }
+    setCurrentPage(1);
+  };
+
+  const renderSortableHeader = (label, key, additionalClasses = '') => {
+    const isSorted = sortConfig.key === key;
+    return (
+      <th
+        onClick={() => requestSort(key)}
+        className={`border border-slate-200 dark:border-slate-800 py-3 px-4 text-center cursor-pointer select-none group transition hover:bg-slate-200 dark:hover:bg-slate-800 print:bg-slate-100 print:text-black ${additionalClasses}`}
+      >
+        <div className="flex items-center justify-center gap-1">
+          <span>{label}</span>
+          <span className={`text-xs transition-opacity duration-150 print:hidden ${isSorted ? 'opacity-100 text-blue-600 dark:text-blue-400 font-extrabold' : 'opacity-0 group-hover:opacity-60 text-slate-400'}`}>
+            {isSorted ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲'}
+          </span>
+        </div>
+      </th>
+    );
+  };
 
   // Filter to include only non-charge-level data for enumerator mapping
   const hlbData = data.filter(item => !item.isChargeLevel);
@@ -89,24 +148,65 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
     }
 
     return matchesSearch && matchesZone && matchesWard && matchesCircle && matchesStatus && matchesProgress && matchesFeeding;
-  }).sort((a, b) => {
-    const nameA = (a.supervisorName || '').toLowerCase();
-    const nameB = (b.supervisorName || '').toLowerCase();
-    const nameCompare = nameA.localeCompare(nameB);
+  });
 
-    if (sortBy === 'progress_asc' || sortBy === 'progress_desc') {
-      if (nameCompare !== 0) return nameCompare;
-      
-      let progA = a.expectedHouses > 0 ? (a.surveyedHouses / a.expectedHouses) : 0;
-      let progB = b.expectedHouses > 0 ? (b.surveyedHouses / b.expectedHouses) : 0;
-      if (capProgressAt100) {
-        progA = Math.min(1, progA);
-        progB = Math.min(1, progB);
-      }
-      return sortBy === 'progress_asc' ? progA - progB : progB - progA;
+  // Sort the filtered data based on sortConfig
+  filteredData.sort((a, b) => {
+    if (sortConfig.key === 'default') {
+      const nameA = (a.supervisorName || '').toLowerCase();
+      const nameB = (b.supervisorName || '').toLowerCase();
+      return nameA.localeCompare(nameB);
     }
 
-    return nameCompare;
+    let valA, valB;
+    if (sortConfig.key === 'supervisor') {
+      valA = a.supervisorName || '';
+      valB = b.supervisorName || '';
+    } else if (sortConfig.key === 'enumerator') {
+      valA = a.enumeratorName || '';
+      valB = b.enumeratorName || '';
+    } else if (sortConfig.key === 'charge') {
+      valA = a.chargeId || '';
+      valB = b.chargeId || '';
+    } else if (sortConfig.key === 'hlb') {
+      valA = a.hlbId || '';
+      valB = b.hlbId || '';
+    } else if (sortConfig.key === 'originalHlb') {
+      valA = a.originalHlbCode || '';
+      valB = b.originalHlbCode || '';
+    } else if (sortConfig.key === 'villageWard') {
+      valA = a.villageWard || '';
+      valB = b.villageWard || '';
+    } else if (sortConfig.key === 'area') {
+      valA = a.area || '';
+      valB = b.area || '';
+    } else if (sortConfig.key === 'circle') {
+      valA = a.supervisorCircle || '';
+      valB = b.supervisorCircle || '';
+    } else if (sortConfig.key === 'expected') {
+      valA = a.expectedHouses || 0;
+      valB = b.expectedHouses || 0;
+    } else if (sortConfig.key === 'feeding') {
+      valA = a.surveyedHouses || 0;
+      valB = b.surveyedHouses || 0;
+    } else if (sortConfig.key === 'progress') {
+      valA = a.expectedHouses > 0 ? (a.surveyedHouses / a.expectedHouses) : 0;
+      valB = b.expectedHouses > 0 ? (b.surveyedHouses / b.expectedHouses) : 0;
+    } else if (sortConfig.key === 'status') {
+      valA = a.status || '';
+      valB = b.status || '';
+    }
+
+    if (valA === valB) return 0;
+    if (typeof valA === 'string') {
+      return sortConfig.direction === 'asc'
+        ? valA.localeCompare(valB)
+        : valB.localeCompare(valA);
+    } else {
+      return sortConfig.direction === 'asc'
+        ? valA - valB
+        : valB - valA;
+    }
   });
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -263,7 +363,73 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
       styles: { fontSize: 6, cellPadding: 1.5, valign: 'middle', halign: 'center', lineWidth: 0.1, lineColor: [226, 232, 240], textColor: [51, 65, 85] },
       headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', lineWidth: 0.1, lineColor: [15, 23, 42] },
       alternateRowStyles: { fillColor: [248, 250, 252] },
-      columnStyles: { 0: { halign: 'center', cellWidth: 10 }, 11: { halign: 'right', cellWidth: 15 }, 12: { halign: 'right', cellWidth: 15, fontStyle: 'bold', textColor: [29, 78, 216] }, 13: { halign: 'right', cellWidth: 15, fontStyle: 'bold' }, 14: { halign: 'center', cellWidth: 15 } },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 10 },
+        11: { halign: 'right', cellWidth: 15 },
+        12: { halign: 'center', cellWidth: 15 },
+        13: { halign: 'center', cellWidth: 15 },
+        14: { halign: 'center', cellWidth: 15 }
+      },
+      didParseCell: function (data) {
+        if (data.section === 'body') {
+          // Column 12: Feeding
+          if (data.column.index === 12) {
+            const feedingVal = parseInt(data.cell.text[0]) || 0;
+            if (feedingVal > 0) {
+              data.cell.styles.fillColor = [239, 246, 255]; // bg-blue-50
+              data.cell.styles.textColor = [29, 78, 216]; // text-blue-700
+              data.cell.styles.fontStyle = 'bold';
+            } else {
+              data.cell.styles.fillColor = [248, 250, 252]; // bg-slate-50
+              data.cell.styles.textColor = [100, 116, 139]; // text-slate-500
+            }
+          }
+          
+          // Column 13: Progress %
+          if (data.column.index === 13) {
+            const text = data.cell.text[0] || '0%';
+            const progressVal = parseInt(text.replace('%', '')) || 0;
+            
+            if (progressVal >= 100) {
+              data.cell.styles.fillColor = [209, 250, 229]; // bg-emerald-100
+              data.cell.styles.textColor = [6, 95, 70]; // text-emerald-800
+              data.cell.styles.fontStyle = 'bold';
+            } else if (progressVal >= 95) {
+              data.cell.styles.fillColor = [219, 234, 254]; // bg-blue-100
+              data.cell.styles.textColor = [30, 64, 175]; // text-blue-800
+              data.cell.styles.fontStyle = 'bold';
+            } else if (progressVal >= 50) {
+              data.cell.styles.fillColor = [254, 243, 199]; // bg-amber-100
+              data.cell.styles.textColor = [146, 64, 14]; // text-amber-800
+              data.cell.styles.fontStyle = 'bold';
+            } else if (progressVal > 0) {
+              data.cell.styles.fillColor = [255, 228, 230]; // bg-rose-100
+              data.cell.styles.textColor = [159, 18, 57]; // text-rose-800
+              data.cell.styles.fontStyle = 'bold';
+            } else {
+              data.cell.styles.fillColor = [241, 245, 249]; // bg-slate-100
+              data.cell.styles.textColor = [51, 65, 85]; // text-slate-800
+            }
+          }
+          
+          // Column 14: Status
+          if (data.column.index === 14) {
+            const statusVal = data.cell.text[0] || 'Yet To Start';
+            if (statusVal === 'Completed') {
+              data.cell.styles.fillColor = [209, 250, 229]; // bg-emerald-100
+              data.cell.styles.textColor = [6, 95, 70]; // text-emerald-800
+              data.cell.styles.fontStyle = 'bold';
+            } else if (statusVal === 'In Progress') {
+              data.cell.styles.fillColor = [219, 234, 254]; // bg-blue-100
+              data.cell.styles.textColor = [30, 64, 175]; // text-blue-800
+              data.cell.styles.fontStyle = 'bold';
+            } else {
+              data.cell.styles.fillColor = [241, 245, 249]; // bg-slate-100
+              data.cell.styles.textColor = [51, 65, 85]; // text-slate-800
+            }
+          }
+        }
+      },
       didDrawPage: function (data) {
         let str = 'Page ' + doc.internal.getNumberOfPages();
         doc.setFontSize(8);
@@ -401,10 +567,14 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
                   Show Anomalies (≥100% Not Completed)
                 </span>
               </label>
-              <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setCurrentPage(1); }} className="rounded-lg border border-slate-200 bg-white py-1.5 px-3 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 shadow-sm">
+              <select value={getDropdownSortValue()} onChange={(e) => handleDropdownSortChange(e.target.value)} className="rounded-lg border border-slate-200 bg-white py-1.5 px-3 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 shadow-sm">
                 <option value="default">Sort: Supervisor (A-Z)</option>
+                <option value="supervisor_desc">Sort: Supervisor (Z-A)</option>
                 <option value="progress_asc">Sort: Progress (Low to High)</option>
                 <option value="progress_desc">Sort: Progress (High to Low)</option>
+                {getDropdownSortValue() === 'custom' && (
+                  <option value="custom">Custom Column Sort</option>
+                )}
               </select>
             </div>
           </div>
@@ -448,21 +618,21 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
           <table className="w-full text-left text-base text-slate-700 dark:text-slate-300 border-collapse whitespace-nowrap print:whitespace-normal">
             <thead className="bg-slate-100 border-b-2 border-slate-300 text-sm font-bold uppercase tracking-wider text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 print:bg-slate-100 print:border-black print:text-black">
               <tr>
-                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4 text-center">Sr. No.</th>
-                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4">Charge ID</th>
-                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4">HLB</th>
-                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4">Map HLB Code</th>
-                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4">Village/Ward Name</th>
-                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4">Area</th>
-                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4 text-center">Sup. Circle</th>
-                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4">Supervisor Name</th>
-                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4">Supervisor No.</th>
-                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4">Enumerator Name</th>
-                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4">Enumerator No.</th>
-                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4 text-right">Expected</th>
-                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4 text-right">Feeding</th>
-                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4 text-center">Progress %</th>
-                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4 text-center">Status</th>
+                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4 text-center print:bg-slate-100 print:text-black">Sr. No.</th>
+                {renderSortableHeader('Charge ID', 'charge')}
+                {renderSortableHeader('HLB', 'hlb')}
+                {renderSortableHeader('Map HLB Code', 'originalHlb')}
+                {renderSortableHeader('Village/Ward Name', 'villageWard')}
+                {renderSortableHeader('Area', 'area')}
+                {renderSortableHeader('Sup. Circle', 'circle')}
+                {renderSortableHeader('Supervisor Name', 'supervisor')}
+                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4 print:bg-slate-100 print:text-black">Supervisor No.</th>
+                {renderSortableHeader('Enumerator Name', 'enumerator')}
+                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4 print:bg-slate-100 print:text-black">Enumerator No.</th>
+                {renderSortableHeader('Expected', 'expected', 'text-right')}
+                {renderSortableHeader('Feeding', 'feeding', 'text-right')}
+                {renderSortableHeader('Progress %', 'progress')}
+                {renderSortableHeader('Status', 'status')}
               </tr>
             </thead>
             
@@ -474,13 +644,6 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
                     ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
                     : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0));
                     
-                  let progressColorClass = 'bg-slate-100/50 text-slate-700 dark:bg-slate-800/50 dark:text-slate-400';
-                  if (progressValue > 100) progressColorClass = 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400';
-                  else if (progressValue === 100) progressColorClass = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400';
-                  else if (progressValue >= 75) progressColorClass = 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400';
-                  else if (progressValue >= 40) progressColorClass = 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400';
-                  else if (progressValue > 0) progressColorClass = 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400';
-
                   return (
                   <tr key={`screen-${index}`} className="hover:bg-amber-50/50 dark:hover:bg-slate-800/50 transition-colors">
                     <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-center font-bold text-slate-500">{globalIndex}</td>
@@ -495,15 +658,33 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
                     <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">{toTitleCase(item.enumeratorName)}</td>
                     <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-emerald-700 dark:text-emerald-500">{item.enumeratorNumber || '-'}</td>
                     <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-right font-mono font-medium">{item.expectedHouses}</td>
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-right font-mono font-bold text-blue-700 dark:text-blue-400">{item.surveyedHouses}</td>
-                    <td className={`border border-slate-200 dark:border-slate-700 py-3 px-4 text-center text-lg font-mono font-bold ${progressColorClass}`}>
-                      {progressValue}%
-                    </td>
+                    
+                    {/* Feeding Column (Screen) */}
                     <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-center">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                        item.status === 'Completed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                        item.status === 'In Progress' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                        'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                      {item.surveyedHouses > 0 ? (
+                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md border font-mono font-bold text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-800">
+                          {item.surveyedHouses}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md border font-mono font-bold text-xs bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700">
+                          0
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Progress Column (Screen) */}
+                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-center">
+                      <span className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full font-bold text-xs border ${getProgressBadgeClass(progressValue)}`}>
+                        {progressValue}%
+                      </span>
+                    </td>
+
+                    {/* Status Column (Screen) */}
+                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-center">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                        item.status === 'Completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-400 dark:border-emerald-800' :
+                        item.status === 'In Progress' ? 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/50 dark:text-blue-400 dark:border-blue-800' :
+                        'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
                       }`}>
                         {item.status || 'Yet To Start'}
                       </span>
@@ -541,20 +722,48 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
                     <td className="border print:border-slate-400 py-3 px-4 font-semibold print:text-black">{toTitleCase(item.enumeratorName)}</td>
                     <td className="border print:border-slate-400 py-3 px-4 font-mono font-medium print:text-black">{item.enumeratorNumber || '-'}</td>
                     <td className="border print:border-slate-400 py-3 px-4 text-right font-mono font-medium print:text-black">{item.expectedHouses}</td>
-                    <td className="border print:border-slate-400 py-3 px-4 text-right font-mono font-bold print:text-black">{item.surveyedHouses}</td>
-                    <td className="border print:border-slate-400 py-3 px-4 text-center text-base font-mono font-bold print:text-black">
-                      {(capProgressAt100 
-                        ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
-                        : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0))}%
+                    
+                    {/* Feeding Column (Print) */}
+                    <td className="border print:border-slate-400 py-3 px-4 text-center">
+                      {item.surveyedHouses > 0 ? (
+                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md border font-mono font-bold text-xs bg-blue-50 text-blue-700 border-blue-200 print:bg-blue-100 print:text-blue-800 print:border-blue-300">
+                          {item.surveyedHouses}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md border font-mono font-bold text-xs bg-slate-50 text-slate-500 border-slate-200 print:bg-slate-100 print:text-slate-600 print:border-slate-300">
+                          0
+                        </span>
+                      )}
                     </td>
-                    <td className="border print:border-slate-400 py-3 px-4 text-center text-[10px] font-bold uppercase print:text-black">
-                      {item.status || 'Yet To Start'}
+
+                    {/* Progress Column (Print) */}
+                    <td className="border print:border-slate-400 py-3 px-4 text-center">
+                      <span className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full font-bold text-xs border ${getProgressBadgeClass(
+                        capProgressAt100 
+                          ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
+                          : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0)
+                      )}`}>
+                        {(capProgressAt100 
+                          ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
+                          : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0))}%
+                      </span>
+                    </td>
+
+                    {/* Status Column (Print) */}
+                    <td className="border print:border-slate-400 py-3 px-4 text-center">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                        item.status === 'Completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-300 print:bg-emerald-100 print:text-emerald-800 print:border-emerald-300' :
+                        item.status === 'In Progress' ? 'bg-blue-100 text-blue-800 border-blue-300 print:bg-blue-100 print:text-blue-800 print:border-blue-300' :
+                        'bg-slate-100 text-slate-800 border-slate-300 print:bg-slate-100 print:text-slate-700 print:border-slate-300'
+                      }`}>
+                        {item.status || 'Yet To Start'}
+                      </span>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="14" className="py-12 text-center text-slate-500">
+                  <td colSpan="15" className="py-12 text-center text-slate-500">
                     No contacts found.
                   </td>
                 </tr>
