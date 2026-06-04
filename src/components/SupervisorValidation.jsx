@@ -109,6 +109,8 @@ export default function SupervisorValidation({ rawCensusData }) {
         masterVerified,
         masterSurveyed,
         masterSupervisor: masterRecord ? masterRecord.supervisorName : 'Not Found',
+        masterSupervisorNumber: masterRecord ? masterRecord.supervisorNumber : (row['Supervisor Number'] || row['Supervisor Mobile'] || ''),
+        masterSupervisorCircle: masterRecord ? masterRecord.supervisorCircle : (row['Supervisor Circle'] || ''),
         isMismatch
       };
     }).filter(r => r.hlbId); // filter out empty rows
@@ -119,6 +121,8 @@ export default function SupervisorValidation({ rawCensusData }) {
       if (!supervisorMap[sup]) {
         supervisorMap[sup] = {
           name: sup,
+          number: row.masterSupervisorNumber || '',
+          circle: row.masterSupervisorCircle || '',
           hlbCount: 0,
           excelExpected: 0,
           excelVerified: 0,
@@ -166,6 +170,18 @@ export default function SupervisorValidation({ rawCensusData }) {
       filtered.sort((a, b) => (a.masterSupervisor || '').localeCompare(b.masterSupervisor || ''));
     } else if (sortOrder === 'desc') {
       filtered.sort((a, b) => (b.masterSupervisor || '').localeCompare(a.masterSupervisor || ''));
+    } else if (sortOrder === 'progress-asc') {
+      filtered.sort((a, b) => {
+        const pA = a.excelExpected > 0 ? a.excelVerified / a.excelExpected : 0;
+        const pB = b.excelExpected > 0 ? b.excelVerified / b.excelExpected : 0;
+        return pA - pB;
+      });
+    } else if (sortOrder === 'progress-desc') {
+      filtered.sort((a, b) => {
+        const pA = a.excelExpected > 0 ? a.excelVerified / a.excelExpected : 0;
+        const pB = b.excelExpected > 0 ? b.excelVerified / b.excelExpected : 0;
+        return pB - pA;
+      });
     }
 
     return filtered;
@@ -181,6 +197,18 @@ export default function SupervisorValidation({ rawCensusData }) {
       filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     } else if (sortOrder === 'desc') {
       filtered.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+    } else if (sortOrder === 'progress-asc') {
+      filtered.sort((a, b) => {
+        const pA = a.excelExpected > 0 ? a.excelVerified / a.excelExpected : 0;
+        const pB = b.excelExpected > 0 ? b.excelVerified / b.excelExpected : 0;
+        return pA - pB;
+      });
+    } else if (sortOrder === 'progress-desc') {
+      filtered.sort((a, b) => {
+        const pA = a.excelExpected > 0 ? a.excelVerified / a.excelExpected : 0;
+        const pB = b.excelExpected > 0 ? b.excelVerified / b.excelExpected : 0;
+        return pB - pA;
+      });
     }
 
     return filtered;
@@ -217,6 +245,16 @@ export default function SupervisorValidation({ rawCensusData }) {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-8">
+      <style>{`
+        @media print {
+          table th, table td, table span, table div, table h1, table h2, table h3 {
+            color: #000 !important;
+          }
+          table, table th, table td {
+            border-color: #000 !important;
+          }
+        }
+      `}</style>
       {/* Header */}
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 print:hidden">
         <div className="flex items-center gap-3">
@@ -314,6 +352,8 @@ export default function SupervisorValidation({ rawCensusData }) {
                 <option value="default">Default Sort</option>
                 <option value="asc">A to Z</option>
                 <option value="desc">Z to A</option>
+                <option value="progress-desc">Progress (High to Low)</option>
+                <option value="progress-asc">Progress (Low to High)</option>
               </select>
 
               {viewMode === 'hlb' && (
@@ -351,16 +391,16 @@ export default function SupervisorValidation({ rawCensusData }) {
           {/* Data Table */}
           {viewMode === 'hlb' ? (
             <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 print:border-none print:shadow-none print:overflow-visible">
-              <table className="w-full text-center text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                <thead className="bg-slate-100 border-b border-slate-200 font-semibold text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200">
+              <table className="w-full text-center text-sm text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                <thead className="bg-slate-100 border-b border-slate-200 font-semibold text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100">
                   <tr>
-                    <th colSpan="8" className="bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-700 py-6">
+                    <th colSpan="10" className="bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-700 py-6">
                       <div className="flex flex-col items-center justify-center">
-                        <img src={logoImg} alt="Janganana Logo" className="h-24 w-24 object-contain mb-3" />
+                        <img src={logoImg} alt="Janganana Logo" className="h-32 w-32 object-contain mb-4" />
                         <h1 className="text-xl font-black uppercase tracking-widest text-slate-900 dark:text-white mb-1">CENSUS OF INDIA 2027</h1>
-                        <h2 className="text-md font-bold uppercase tracking-tight text-slate-700 dark:text-slate-300">Ministry of Home Affairs, Government of India</h2>
-                        <h3 className="text-sm font-semibold mt-1 text-slate-600 dark:text-slate-400">Janganana Bureau - Supervisor Validation Report</h3>
-                        <span className="text-xs text-slate-500 mt-1 font-normal">Report Compiled on: {new Date().toLocaleDateString('en-IN')}</span>
+                        <h2 className="text-md font-bold uppercase tracking-tight text-slate-900 dark:text-slate-100">Ministry of Home Affairs, Government of India</h2>
+                        <h3 className="text-sm font-semibold mt-1 text-slate-800 dark:text-slate-200">Janganana Bureau - Supervisor Validation Report</h3>
+                        <span className="text-xs text-slate-800 mt-1 font-normal">Report Compiled on: {new Date().toLocaleDateString('en-IN')}</span>
                       </div>
                     </th>
                   </tr>
@@ -368,10 +408,12 @@ export default function SupervisorValidation({ rawCensusData }) {
                     <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 w-16 text-center">Sr. No.</th>
                     <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">HLB Code</th>
                     <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">Ward</th>
-                    <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">Supervisor</th>
-                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300">Expected (Excel)</th>
-                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300">Verified (Excel)</th>
-                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">Difference (Excel)</th>
+                    <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">Supervisor Name</th>
+                    <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">Circle</th>
+                    <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">Contact No.</th>
+                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300">Expected</th>
+                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300">Verified</th>
+                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">Difference</th>
                     <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">Progress</th>
                   </tr>
                 </thead>
@@ -379,15 +421,17 @@ export default function SupervisorValidation({ rawCensusData }) {
                   {filteredData.length > 0 ? (
                     filteredData.map((row, idx) => (
                       <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 text-slate-500 font-medium">{idx + 1}</td>
+                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 text-slate-900 font-medium">{idx + 1}</td>
                         <td className="px-4 py-3 font-mono text-center border border-slate-200 dark:border-slate-700 font-bold">{row.hlbId}</td>
                         <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">{row.wardNo || '-'}</td>
-                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">{row.masterSupervisor}</td>
+                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 font-semibold text-slate-900">{row.masterSupervisor}</td>
+                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 text-slate-800 text-xs">{row.masterSupervisorCircle || '-'}</td>
+                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 text-slate-800 font-mono text-xs">{row.masterSupervisorNumber || '-'}</td>
 
                         <td className="px-4 py-3 text-center font-mono border border-slate-200 dark:border-slate-700 bg-indigo-50/50 dark:bg-indigo-900/10">{row.excelExpected}</td>
                         <td className="px-4 py-3 text-center font-mono border border-slate-200 dark:border-slate-700 bg-indigo-50/50 dark:bg-indigo-900/10 font-bold">{row.excelVerified}</td>
 
-                        <td className={`px-4 py-3 text-center font-mono border border-slate-200 dark:border-slate-700 font-bold ${row.excelDifference > 0 ? 'text-red-500' : 'text-slate-500'}`}>
+                        <td className={`px-4 py-3 text-center font-mono border border-slate-200 dark:border-slate-700 font-bold ${row.excelDifference > 0 ? 'text-red-600' : 'text-slate-900'}`}>
                           {row.excelDifference}
                         </td>
 
@@ -400,7 +444,7 @@ export default function SupervisorValidation({ rawCensusData }) {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="8" className="px-4 py-8 text-center text-slate-500">
+                      <td colSpan="10" className="px-4 py-8 text-center text-slate-900 font-medium">
                         No matching records found based on current filters.
                       </td>
                     </tr>
@@ -410,26 +454,28 @@ export default function SupervisorValidation({ rawCensusData }) {
             </div>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 print:border-none print:shadow-none print:overflow-visible">
-              <table className="w-full text-center text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                <thead className="bg-slate-100 border-b border-slate-200 font-semibold text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200">
+              <table className="w-full text-center text-sm text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                <thead className="bg-slate-100 border-b border-slate-200 font-semibold text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100">
                   <tr>
-                    <th colSpan="7" className="bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-700 py-6">
+                    <th colSpan="9" className="bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-700 py-6">
                       <div className="flex flex-col items-center justify-center">
-                        <img src={logoImg} alt="Janganana Logo" className="h-24 w-24 object-contain mb-3" />
+                        <img src={logoImg} alt="Janganana Logo" className="h-32 w-32 object-contain mb-4" />
                         <h1 className="text-xl font-black uppercase tracking-widest text-slate-900 dark:text-white mb-1">CENSUS OF INDIA 2027</h1>
-                        <h2 className="text-md font-bold uppercase tracking-tight text-slate-700 dark:text-slate-300">Ministry of Home Affairs, Government of India</h2>
-                        <h3 className="text-sm font-semibold mt-1 text-slate-600 dark:text-slate-400">Janganana Bureau - Supervisor Validation Report</h3>
-                        <span className="text-xs text-slate-500 mt-1 font-normal">Report Compiled on: {new Date().toLocaleDateString('en-IN')}</span>
+                        <h2 className="text-md font-bold uppercase tracking-tight text-slate-900 dark:text-slate-100">Ministry of Home Affairs, Government of India</h2>
+                        <h3 className="text-sm font-semibold mt-1 text-slate-800 dark:text-slate-200">Janganana Bureau - Supervisor Validation Report</h3>
+                        <span className="text-xs text-slate-800 mt-1 font-normal">Report Compiled on: {new Date().toLocaleDateString('en-IN')}</span>
                       </div>
                     </th>
                   </tr>
                   <tr>
                     <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 w-16 text-center">Sr. No.</th>
                     <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">Supervisor Name</th>
+                    <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">Circle</th>
+                    <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">Contact No.</th>
                     <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">Total HLBs</th>
-                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300">Expected (Excel)</th>
-                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300">Verified (Excel)</th>
-                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">Difference (Excel)</th>
+                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300">Expected</th>
+                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300">Verified</th>
+                    <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">Difference</th>
                     <th className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">Progress</th>
                   </tr>
                 </thead>
@@ -437,14 +483,16 @@ export default function SupervisorValidation({ rawCensusData }) {
                   {filteredSupervisors.length > 0 ? (
                     filteredSupervisors.map((sup, idx) => (
                       <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 text-slate-500 font-medium">{idx + 1}</td>
-                        <td className="px-4 py-3 font-semibold text-center border border-slate-200 dark:border-slate-700">{sup.name}</td>
+                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 text-slate-900 font-medium">{idx + 1}</td>
+                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 font-semibold text-slate-900">{sup.name}</td>
+                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 text-slate-800 text-xs">{sup.circle || '-'}</td>
+                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 text-slate-800 font-mono text-xs">{sup.number || '-'}</td>
                         <td className="px-4 py-3 text-center font-mono border border-slate-200 dark:border-slate-700">{sup.hlbCount}</td>
 
                         <td className="px-4 py-3 text-center font-mono border border-slate-200 dark:border-slate-700 bg-indigo-50/50 dark:bg-indigo-900/10">{sup.excelExpected}</td>
                         <td className="px-4 py-3 text-center font-mono border border-slate-200 dark:border-slate-700 bg-indigo-50/50 dark:bg-indigo-900/10 font-bold">{sup.excelVerified}</td>
 
-                        <td className={`px-4 py-3 text-center font-mono border border-slate-200 dark:border-slate-700 font-bold ${sup.excelDifference > 0 ? 'text-red-500' : 'text-slate-500'}`}>
+                        <td className={`px-4 py-3 text-center font-mono border border-slate-200 dark:border-slate-700 font-bold ${sup.excelDifference > 0 ? 'text-red-600' : 'text-slate-900'}`}>
                           {sup.excelDifference}
                         </td>
 
@@ -457,7 +505,7 @@ export default function SupervisorValidation({ rawCensusData }) {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6" className="px-4 py-8 text-center text-slate-500">
+                      <td colSpan="9" className="px-4 py-8 text-center text-slate-900 font-medium">
                         No supervisors found.
                       </td>
                     </tr>
