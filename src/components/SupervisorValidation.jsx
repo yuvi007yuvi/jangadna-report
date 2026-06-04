@@ -243,10 +243,21 @@ export default function SupervisorValidation({ rawCensusData }) {
     );
   }
 
+  const getProgressBadgeClass = (progress) => {
+    if (progress >= 100) return "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-400 dark:border-emerald-800";
+    if (progress >= 90) return "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/50 dark:text-blue-400 dark:border-blue-800";
+    if (progress >= 50) return "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-400 dark:border-amber-800";
+    return "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-900/50 dark:text-rose-400 dark:border-rose-800";
+  };
+
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-8">
       <style>{`
         @media print {
+          table {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
           table th, table td, table span, table div, table h1, table h2, table h3 {
             color: #000 !important;
           }
@@ -431,14 +442,24 @@ export default function SupervisorValidation({ rawCensusData }) {
                         <td className="px-4 py-3 text-center font-mono border border-slate-200 dark:border-slate-700 bg-indigo-50/50 dark:bg-indigo-900/10">{row.excelExpected}</td>
                         <td className="px-4 py-3 text-center font-mono border border-slate-200 dark:border-slate-700 bg-indigo-50/50 dark:bg-indigo-900/10 font-bold">{row.excelVerified}</td>
 
-                        <td className={`px-4 py-3 text-center font-mono border border-slate-200 dark:border-slate-700 font-bold ${row.excelDifference > 0 ? 'text-red-600' : 'text-slate-900'}`}>
-                          {row.excelDifference}
+                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">
+                          {row.excelDifference > 0 ? (
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md border font-mono font-bold text-xs bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-900/50 dark:text-rose-400 dark:border-rose-800">
+                              +{row.excelDifference}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md border font-mono font-bold text-xs bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                              0
+                            </span>
+                          )}
                         </td>
 
-                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 font-bold">
-                          {row.excelExpected > 0
-                            ? ((row.excelVerified / row.excelExpected) * 100).toFixed(1) + '%'
-                            : '0.0%'}
+                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">
+                          <span className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full border font-bold text-xs ${
+                            row.excelExpected > 0 ? getProgressBadgeClass((row.excelVerified / row.excelExpected) * 100) : getProgressBadgeClass(0)
+                          }`}>
+                            {row.excelExpected > 0 ? ((row.excelVerified / row.excelExpected) * 100).toFixed(1) + '%' : '0.0%'}
+                          </span>
                         </td>
                       </tr>
                     ))
@@ -492,14 +513,24 @@ export default function SupervisorValidation({ rawCensusData }) {
                         <td className="px-4 py-3 text-center font-mono border border-slate-200 dark:border-slate-700 bg-indigo-50/50 dark:bg-indigo-900/10">{sup.excelExpected}</td>
                         <td className="px-4 py-3 text-center font-mono border border-slate-200 dark:border-slate-700 bg-indigo-50/50 dark:bg-indigo-900/10 font-bold">{sup.excelVerified}</td>
 
-                        <td className={`px-4 py-3 text-center font-mono border border-slate-200 dark:border-slate-700 font-bold ${sup.excelDifference > 0 ? 'text-red-600' : 'text-slate-900'}`}>
-                          {sup.excelDifference}
+                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">
+                          {sup.excelDifference > 0 ? (
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md border font-mono font-bold text-xs bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-900/50 dark:text-rose-400 dark:border-rose-800">
+                              +{sup.excelDifference}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md border font-mono font-bold text-xs bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                              0
+                            </span>
+                          )}
                         </td>
 
-                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 font-bold">
-                          {sup.excelExpected > 0
-                            ? ((sup.excelVerified / sup.excelExpected) * 100).toFixed(1) + '%'
-                            : '0.0%'}
+                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">
+                          <span className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full border font-bold text-xs ${
+                            sup.excelExpected > 0 ? getProgressBadgeClass((sup.excelVerified / sup.excelExpected) * 100) : getProgressBadgeClass(0)
+                          }`}>
+                            {sup.excelExpected > 0 ? ((sup.excelVerified / sup.excelExpected) * 100).toFixed(1) + '%' : '0.0%'}
+                          </span>
                         </td>
                       </tr>
                     ))
