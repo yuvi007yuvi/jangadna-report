@@ -22,6 +22,8 @@ export default function SupervisorValidation({ rawCensusData }) {
   const [success, setSuccess] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all'); // 'all', 'mismatch', 'match'
+  const [minProgress, setMinProgress] = useState('');
+  const [maxProgress, setMaxProgress] = useState('');
   const [viewMode, setViewMode] = useState('supervisor'); // 'hlb', 'supervisor'
   const [sortOrder, setSortOrder] = useState('default'); // 'default', 'asc', 'desc'
 
@@ -160,10 +162,27 @@ export default function SupervisorValidation({ rawCensusData }) {
         (row.wardNo && String(row.wardNo).toLowerCase().includes(searchTerm.toLowerCase())) ||
         row.masterSupervisor.toLowerCase().includes(searchTerm.toLowerCase());
 
-      if (filterType === 'mismatch') return matchesSearch && row.isMismatch;
-      if (filterType === 'match') return matchesSearch && !row.isMismatch && row.masterRecord;
-      if (filterType === 'unmatched') return matchesSearch && !row.masterRecord;
-      return matchesSearch;
+      let matchesFilter = true;
+      if (filterType === 'mismatch') matchesFilter = row.isMismatch;
+      else if (filterType === 'match') matchesFilter = !row.isMismatch && row.masterRecord;
+      else if (filterType === 'unmatched') matchesFilter = !row.masterRecord;
+
+      let matchesProgress = true;
+      const progress = row.excelExpected > 0 ? (row.excelVerified / row.excelExpected) * 100 : 0;
+      if (minProgress !== '') {
+        const minVal = parseFloat(minProgress);
+        if (!isNaN(minVal)) {
+          matchesProgress = matchesProgress && progress >= minVal;
+        }
+      }
+      if (maxProgress !== '') {
+        const maxVal = parseFloat(maxProgress);
+        if (!isNaN(maxVal)) {
+          matchesProgress = matchesProgress && progress <= maxVal;
+        }
+      }
+
+      return matchesSearch && matchesFilter && matchesProgress;
     });
 
     if (sortOrder === 'asc') {
@@ -185,13 +204,30 @@ export default function SupervisorValidation({ rawCensusData }) {
     }
 
     return filtered;
-  }, [fileData, searchTerm, filterType, sortOrder]);
+  }, [fileData, searchTerm, filterType, minProgress, maxProgress, sortOrder]);
 
   const filteredSupervisors = useMemo(() => {
     if (!fileData) return [];
-    let filtered = fileData.supervisors.filter(sup =>
-      sup.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    let filtered = fileData.supervisors.filter(sup => {
+      const matchesSearch = sup.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+      let matchesProgress = true;
+      const progress = sup.excelExpected > 0 ? (sup.excelVerified / sup.excelExpected) * 100 : 0;
+      if (minProgress !== '') {
+        const minVal = parseFloat(minProgress);
+        if (!isNaN(minVal)) {
+          matchesProgress = matchesProgress && progress >= minVal;
+        }
+      }
+      if (maxProgress !== '') {
+        const maxVal = parseFloat(maxProgress);
+        if (!isNaN(maxVal)) {
+          matchesProgress = matchesProgress && progress <= maxVal;
+        }
+      }
+
+      return matchesSearch && matchesProgress;
+    });
 
     if (sortOrder === 'asc') {
       filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -212,7 +248,7 @@ export default function SupervisorValidation({ rawCensusData }) {
     }
 
     return filtered;
-  }, [fileData, searchTerm, sortOrder]);
+  }, [fileData, searchTerm, minProgress, maxProgress, sortOrder]);
 
   const supervisorTotals = useMemo(() => {
     if (!filteredSupervisors) return null;
@@ -336,7 +372,7 @@ export default function SupervisorValidation({ rawCensusData }) {
                 className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-gov-500 focus:ring-1 focus:ring-gov-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <div className="flex bg-slate-100 p-1 rounded-xl dark:bg-slate-800">
                 <button
                   onClick={() => setViewMode('hlb')}
@@ -367,6 +403,31 @@ export default function SupervisorValidation({ rawCensusData }) {
                 <option value="progress-asc">Progress (Low to High)</option>
               </select>
 
+              {/* Progress Range Filter: Min to Max */}
+              <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 h-10 dark:border-slate-800 dark:bg-slate-900">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Progress:</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="Min"
+                  value={minProgress}
+                  onChange={(e) => setMinProgress(e.target.value)}
+                  className="w-12 h-7 text-center text-xs font-bold rounded-lg border border-slate-200 bg-slate-50 outline-none transition focus:border-gov-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <span className="text-xs text-slate-400 font-medium">to</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="Max"
+                  value={maxProgress}
+                  onChange={(e) => setMaxProgress(e.target.value)}
+                  className="w-12 h-7 text-center text-xs font-bold rounded-lg border border-slate-200 bg-slate-50 outline-none transition focus:border-gov-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">%</span>
+              </div>
+
               {viewMode === 'hlb' && (
                 <>
                   <Filter className="h-4 w-4 text-slate-400 ml-2 hidden lg:block" />
@@ -375,7 +436,7 @@ export default function SupervisorValidation({ rawCensusData }) {
                     onChange={(e) => setFilterType(e.target.value)}
                     className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium outline-none transition focus:border-gov-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                   >
-                    <option value="all">Show All</option>
+                    <option value="all">Show All Match Types</option>
                     <option value="mismatch">Discrepancies Only</option>
                     <option value="match">Perfect Matches Only</option>
                     <option value="unmatched">Not Found in Master</option>
@@ -545,7 +606,7 @@ export default function SupervisorValidation({ rawCensusData }) {
                 {supervisorTotals && filteredSupervisors.length > 0 && (
                   <tbody className="bg-slate-100 border-t-2 border-slate-300 font-bold text-slate-800 dark:bg-slate-800 dark:border-slate-600 dark:text-white">
                     <tr>
-                      <td colSpan="2" className="px-4 py-4 text-right uppercase tracking-wider text-xs border border-slate-200 dark:border-slate-700">Grand Total:</td>
+                      <td colSpan="4" className="px-4 py-4 text-right uppercase tracking-wider text-xs border border-slate-200 dark:border-slate-700 font-extrabold text-slate-900 dark:text-white">Grand Total:</td>
                       <td className="px-4 py-4 text-center font-mono border border-slate-200 dark:border-slate-700">{supervisorTotals.hlbCount}</td>
                       <td className="px-4 py-4 text-center font-mono border border-slate-200 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/20">{supervisorTotals.excelExpected}</td>
                       <td className="px-4 py-4 text-center font-mono border border-slate-200 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/20">{supervisorTotals.excelVerified}</td>
