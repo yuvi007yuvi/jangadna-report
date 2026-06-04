@@ -39,6 +39,7 @@ export default function Sidebar({
     { id: 'predictions', name: 'Target Predictor', icon: CalendarDays },
     { id: 'insights', name: 'AI Insights Panel', icon: BrainCircuit },
     { id: 'contacts', name: 'Field Contacts', icon: Contact2 },
+    { id: 'supervisorValidation', name: 'Supervisor Validation', icon: FileSpreadsheet },
   ];
 
   return (

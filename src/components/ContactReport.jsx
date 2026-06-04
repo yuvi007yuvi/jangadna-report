@@ -24,6 +24,7 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
   const [maxProgress, setMaxProgress] = useState('');
   const [feedingFilter, setFeedingFilter] = useState('');
   const [showAnomalies, setShowAnomalies] = useState(false);
+  const [sortBy, setSortBy] = useState('default');
 
   // Filter to include only non-charge-level data for enumerator mapping
   const hlbData = data.filter(item => !item.isChargeLevel);
@@ -91,7 +92,21 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
   }).sort((a, b) => {
     const nameA = (a.supervisorName || '').toLowerCase();
     const nameB = (b.supervisorName || '').toLowerCase();
-    return nameA.localeCompare(nameB);
+    const nameCompare = nameA.localeCompare(nameB);
+
+    if (sortBy === 'progress_asc' || sortBy === 'progress_desc') {
+      if (nameCompare !== 0) return nameCompare;
+      
+      let progA = a.expectedHouses > 0 ? (a.surveyedHouses / a.expectedHouses) : 0;
+      let progB = b.expectedHouses > 0 ? (b.surveyedHouses / b.expectedHouses) : 0;
+      if (capProgressAt100) {
+        progA = Math.min(1, progA);
+        progB = Math.min(1, progB);
+      }
+      return sortBy === 'progress_asc' ? progA - progB : progB - progA;
+    }
+
+    return nameCompare;
   });
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -378,7 +393,7 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
                 className="w-full rounded-xl border border-slate-200 bg-white/50 py-2.5 pl-9 pr-4 text-xs text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200 dark:focus:bg-slate-800"
               />
             </div>
-            <div className="flex items-center ml-1 sm:ml-2">
+            <div className="flex items-center ml-1 sm:ml-2 gap-4">
               <label className="flex items-center cursor-pointer relative group">
                 <input type="checkbox" className="sr-only peer" checked={showAnomalies} onChange={(e) => { setShowAnomalies(e.target.checked); setCurrentPage(1); }} />
                 <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-amber-500"></div>
@@ -386,6 +401,11 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
                   Show Anomalies (≥100% Not Completed)
                 </span>
               </label>
+              <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setCurrentPage(1); }} className="rounded-lg border border-slate-200 bg-white py-1.5 px-3 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 shadow-sm">
+                <option value="default">Sort: Supervisor (A-Z)</option>
+                <option value="progress_asc">Sort: Progress (Low to High)</option>
+                <option value="progress_desc">Sort: Progress (High to Low)</option>
+              </select>
             </div>
           </div>
         </div>
@@ -425,24 +445,24 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
         </div>
 
         <div className="overflow-x-auto print:overflow-visible print:w-full">
-          <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300 border-collapse whitespace-nowrap print:whitespace-normal">
-            <thead className="bg-slate-100 border-b-2 border-slate-300 text-xs font-bold uppercase tracking-wider text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 print:bg-slate-100 print:border-black print:text-black">
+          <table className="w-full text-left text-base text-slate-700 dark:text-slate-300 border-collapse whitespace-nowrap print:whitespace-normal">
+            <thead className="bg-slate-100 border-b-2 border-slate-300 text-sm font-bold uppercase tracking-wider text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 print:bg-slate-100 print:border-black print:text-black">
               <tr>
-                <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4 text-center">Sr. No.</th>
-                <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4">Charge ID</th>
-                <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4">HLB</th>
-                <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4">Map HLB Code</th>
-                <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4">Village/Ward Name</th>
-                <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4">Area</th>
-                <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4 text-center">Sup. Circle</th>
-                <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4">Supervisor Name</th>
-                <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4">Supervisor No.</th>
-                <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4">Enumerator Name</th>
-                <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4">Enumerator No.</th>
-                <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4 text-right">Expected</th>
-                <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4 text-right">Feeding</th>
-                <th className="border-r border-slate-200 dark:border-slate-800 py-3 px-4 text-right">Progress %</th>
-                <th className="py-3 px-4 text-center">Status</th>
+                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4 text-center">Sr. No.</th>
+                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4">Charge ID</th>
+                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4">HLB</th>
+                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4">Map HLB Code</th>
+                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4">Village/Ward Name</th>
+                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4">Area</th>
+                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4 text-center">Sup. Circle</th>
+                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4">Supervisor Name</th>
+                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4">Supervisor No.</th>
+                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4">Enumerator Name</th>
+                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4">Enumerator No.</th>
+                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4 text-right">Expected</th>
+                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4 text-right">Feeding</th>
+                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4 text-center">Progress %</th>
+                <th className="border border-slate-200 dark:border-slate-800 py-3 px-4 text-center">Status</th>
               </tr>
             </thead>
             
@@ -450,27 +470,36 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
               {paginatedData.length > 0 ? (
                 paginatedData.map((item, index) => {
                   const globalIndex = ((currentPage - 1) * itemsPerPage) + index + 1;
+                  const progressValue = (capProgressAt100 
+                    ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
+                    : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0));
+                    
+                  let progressColorClass = 'bg-slate-100/50 text-slate-700 dark:bg-slate-800/50 dark:text-slate-400';
+                  if (progressValue > 100) progressColorClass = 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400';
+                  else if (progressValue === 100) progressColorClass = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400';
+                  else if (progressValue >= 75) progressColorClass = 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400';
+                  else if (progressValue >= 40) progressColorClass = 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400';
+                  else if (progressValue > 0) progressColorClass = 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400';
+
                   return (
                   <tr key={`screen-${index}`} className="hover:bg-amber-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 text-center font-bold text-slate-500">{globalIndex}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-mono text-xs text-slate-500">{item.chargeId}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-slate-800 dark:text-slate-100">{item.hlbId}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-mono text-purple-700 dark:text-purple-400 font-bold">{item.originalHlbCode || '-'}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-medium">{item.villageWard || '-'}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-medium">{item.area}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 text-center font-bold text-amber-700 dark:text-amber-500">{item.supervisorCircle || '-'}</td>
+                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-center font-bold text-slate-500">{globalIndex}</td>
+                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-mono text-sm text-slate-500">{item.chargeId}</td>
+                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-slate-800 dark:text-slate-100">{item.hlbId}</td>
+                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-mono text-purple-700 dark:text-purple-400 font-bold">{item.originalHlbCode || '-'}</td>
+                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-medium">{item.villageWard || '-'}</td>
+                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-medium">{item.area}</td>
+                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-center font-bold text-amber-700 dark:text-amber-500">{item.supervisorCircle || '-'}</td>
                     <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">{toTitleCase(item.supervisorName)}</td>
                     <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-amber-700 dark:text-amber-500">{item.supervisorNumber || '-'}</td>
                     <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">{toTitleCase(item.enumeratorName)}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-emerald-700 dark:text-emerald-500">{item.enumeratorNumber || '-'}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 text-right font-mono font-medium">{item.expectedHouses}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 text-right font-mono font-bold text-blue-700 dark:text-blue-400">{item.surveyedHouses}</td>
-                    <td className="border-r border-slate-200 dark:border-slate-700 py-3 px-4 text-right font-mono font-bold text-slate-700 dark:text-slate-300">
-                      {(capProgressAt100 
-                        ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
-                        : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0))}%
+                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-emerald-700 dark:text-emerald-500">{item.enumeratorNumber || '-'}</td>
+                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-right font-mono font-medium">{item.expectedHouses}</td>
+                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-right font-mono font-bold text-blue-700 dark:text-blue-400">{item.surveyedHouses}</td>
+                    <td className={`border border-slate-200 dark:border-slate-700 py-3 px-4 text-center text-lg font-mono font-bold ${progressColorClass}`}>
+                      {progressValue}%
                     </td>
-                    <td className="py-3 px-4 text-center">
+                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-center">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                         item.status === 'Completed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
                         item.status === 'In Progress' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
@@ -500,25 +529,25 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
               {filteredData.length > 0 ? (
                 filteredData.map((item, index) => (
                   <tr key={`print-${index}`}>
-                    <td className="border-r print:border-slate-400 py-3 px-4 text-center font-bold print:text-black">{index + 1}</td>
-                    <td className="border-r print:border-slate-400 py-3 px-4 font-mono text-xs print:text-black">{item.chargeId}</td>
-                    <td className="border-r print:border-slate-400 py-3 px-4 font-mono font-medium print:text-black">{item.hlbId}</td>
-                    <td className="border-r print:border-slate-400 py-3 px-4 font-mono font-bold print:text-black">{item.originalHlbCode || '-'}</td>
-                    <td className="border-r print:border-slate-400 py-3 px-4 font-medium print:text-black">{item.villageWard || '-'}</td>
-                    <td className="border-r print:border-slate-400 py-3 px-4 font-medium print:text-black">{item.area}</td>
-                    <td className="border-r print:border-slate-400 py-3 px-4 text-center font-bold print:text-black">{item.supervisorCircle || '-'}</td>
+                    <td className="border print:border-slate-400 py-3 px-4 text-center font-bold print:text-black">{index + 1}</td>
+                    <td className="border print:border-slate-400 py-3 px-4 font-mono text-xs print:text-black">{item.chargeId}</td>
+                    <td className="border print:border-slate-400 py-3 px-4 font-mono font-medium print:text-black">{item.hlbId}</td>
+                    <td className="border print:border-slate-400 py-3 px-4 font-mono font-bold print:text-black">{item.originalHlbCode || '-'}</td>
+                    <td className="border print:border-slate-400 py-3 px-4 font-medium print:text-black">{item.villageWard || '-'}</td>
+                    <td className="border print:border-slate-400 py-3 px-4 font-medium print:text-black">{item.area}</td>
+                    <td className="border print:border-slate-400 py-3 px-4 text-center font-bold print:text-black">{item.supervisorCircle || '-'}</td>
                     <td className="border print:border-slate-400 py-3 px-4 font-semibold print:text-black">{toTitleCase(item.supervisorName)}</td>
                     <td className="border print:border-slate-400 py-3 px-4 font-mono font-medium print:text-black">{item.supervisorNumber || '-'}</td>
                     <td className="border print:border-slate-400 py-3 px-4 font-semibold print:text-black">{toTitleCase(item.enumeratorName)}</td>
-                    <td className="border-r print:border-slate-400 py-3 px-4 font-mono font-medium print:text-black">{item.enumeratorNumber || '-'}</td>
-                    <td className="border-r print:border-slate-400 py-3 px-4 text-right font-mono font-medium print:text-black">{item.expectedHouses}</td>
-                    <td className="border-r print:border-slate-400 py-3 px-4 text-right font-mono font-bold print:text-black">{item.surveyedHouses}</td>
-                    <td className="border-r print:border-slate-400 py-3 px-4 text-right font-mono font-bold print:text-black">
+                    <td className="border print:border-slate-400 py-3 px-4 font-mono font-medium print:text-black">{item.enumeratorNumber || '-'}</td>
+                    <td className="border print:border-slate-400 py-3 px-4 text-right font-mono font-medium print:text-black">{item.expectedHouses}</td>
+                    <td className="border print:border-slate-400 py-3 px-4 text-right font-mono font-bold print:text-black">{item.surveyedHouses}</td>
+                    <td className="border print:border-slate-400 py-3 px-4 text-center text-base font-mono font-bold print:text-black">
                       {(capProgressAt100 
                         ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
                         : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0))}%
                     </td>
-                    <td className="py-3 px-4 text-center text-[10px] font-bold uppercase print:text-black">
+                    <td className="border print:border-slate-400 py-3 px-4 text-center text-[10px] font-bold uppercase print:text-black">
                       {item.status || 'Yet To Start'}
                     </td>
                   </tr>

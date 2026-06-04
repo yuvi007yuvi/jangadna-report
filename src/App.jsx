@@ -23,6 +23,7 @@ import AiInsights from './components/AiInsights';
 import AdminLogin from './components/AdminLogin';
 import ContactReport from './components/ContactReport';
 import TrendsDashboard from './components/TrendsDashboard';
+import SupervisorValidation from './components/SupervisorValidation';
 import { saveSnapshot } from './utils/db';
 
 import { generateMockCensusData } from './utils/mockDataGenerator';
@@ -502,6 +503,12 @@ export default function App() {
 
           {activeTab === 'trends' && (
             <TrendsDashboard />
+          )}
+
+          {activeTab === 'supervisorValidation' && (
+            <SupervisorValidation 
+              rawCensusData={rawCensusData}
+            />
           )}
         </main>
 
