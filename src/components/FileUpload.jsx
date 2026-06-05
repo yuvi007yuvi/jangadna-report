@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { WARD_MAPPING } from '../utils/wardMapping';
 import { STAFF_MAPPING } from '../utils/staffMapping';
+import bannerImg from '../assets/banner.png';
 
 const REQUIRED_FIELDS = [
   { key: 'chargeId', label: 'Charge ID / Code', description: 'Unique identifier for the area' },
@@ -373,16 +374,45 @@ export default function FileUpload({ onDataLoaded, onLoadDemoData }) {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
-      {/* Upper header information */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">📋</span>
-          <div>
-            <h2 className="font-display text-lg font-bold text-slate-800 dark:text-white">Census Progress Portal</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Upload block-level census logs (.csv or .xlsx) to evaluate operational coverage and detect non-working areas.
-            </p>
+    <div className="mx-auto max-w-7xl space-y-6 p-6">
+      {/* Home Page Banner */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        {/* Banner image - full and clear */}
+        <div className="w-full h-72 md:h-[400px] overflow-hidden border-b border-slate-100 dark:border-slate-800">
+          <img 
+            src={bannerImg} 
+            alt="Janganana Census Banner" 
+            className="w-full h-full object-cover object-center" 
+          />
+        </div>
+
+        {/* Banner content */}
+        <div className="p-6 md:p-8">
+          <span className="inline-flex items-center rounded-full bg-gov-50 px-2.5 py-0.5 text-xs font-semibold text-gov-600 dark:bg-gov-950/40 dark:text-gov-400 mb-3 uppercase tracking-wider">
+            Government of India • Janganana Analytics
+          </span>
+          <h1 className="font-display text-xl md:text-2xl font-extrabold text-slate-800 dark:text-white">
+            National Census Performance Portal
+          </h1>
+          <p className="mt-2 text-xs md:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+            A secure, automated analytical validation framework. Upload block-level census logs to evaluate enumerator performance, analyze supervisor verification pipelines, and predict coverage timelines.
+          </p>
+          
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              onClick={triggerFileSelect}
+              className="rounded-xl bg-gov-600 px-5 py-2.5 text-xs font-semibold text-white shadow hover:bg-gov-500 transition"
+            >
+              Upload Census Sheet
+            </button>
+            {onLoadDemoData && (
+              <button
+                onClick={onLoadDemoData}
+                className="rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 px-5 py-2.5 text-xs font-semibold shadow transition"
+              >
+                Load Demo Dashboard
+              </button>
+            )}
           </div>
         </div>
       </div>

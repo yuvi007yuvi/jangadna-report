@@ -10,7 +10,8 @@ import {
   Menu,
   Shield,
   HelpCircle,
-  TrendingUp
+  TrendingUp,
+  Sparkles
 } from 'lucide-react';
 
 import Sidebar from './components/Sidebar';
@@ -511,6 +512,34 @@ export default function App() {
             />
           )}
         </main>
+
+        {/* Footer */}
+        <footer className="no-print mt-auto border-t border-slate-200 bg-white/60 py-6 px-8 dark:border-slate-800 dark:bg-slate-950/60 backdrop-blur-md">
+          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse-slow"></span>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Janganana Analytics Portal • National Census Performance & Validation System
+              </p>
+            </div>
+            
+            <div className="flex flex-col items-center gap-1.5 md:items-end">
+              <div className="flex items-center gap-2 text-xs font-semibold">
+                <span className="text-slate-400 dark:text-slate-500">© {new Date().getFullYear()}</span>
+                <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-800"></div>
+                <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-200">
+                  <span className="bg-gradient-to-r from-gov-600 via-gold-600 to-gov-700 bg-clip-text text-transparent dark:from-gold-400 dark:via-amber-400 dark:to-gold-500 font-display tracking-wider font-extrabold uppercase">
+                    Created with Purpose by Yuvraj Singh Tomar
+                  </span>
+                  <Sparkles className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
+                </div>
+              </div>
+              <span className="text-[10px] tracking-widest text-slate-400 dark:text-slate-500 uppercase font-bold">
+                Designed for Impact & Precision
+              </span>
+            </div>
+          </div>
+        </footer>
 
         {/* PDF Executive Print-Only View */}
         {currentAnalytics && activeTab === 'dashboard' && (
