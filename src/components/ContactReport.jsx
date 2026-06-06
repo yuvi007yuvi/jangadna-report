@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Search, Phone, Users, MapPin, Building, Hash, Download, FileSpreadsheet, FileText } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -31,6 +31,7 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
   const [minProgress, setMinProgress] = useState('');
   const [maxProgress, setMaxProgress] = useState('');
   const [feedingFilter, setFeedingFilter] = useState('');
+  const [supervisorFilter, setSupervisorFilter] = useState('');
   const [showAnomalies, setShowAnomalies] = useState(false);
   
   const [sortConfig, setSortConfig] = useState({ key: 'default', direction: 'asc' });
@@ -52,6 +53,12 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
     if (sortConfig.key === 'progress') {
       return sortConfig.direction === 'asc' ? 'progress_asc' : 'progress_desc';
     }
+    if (sortConfig.key === 'supervisor_progress') {
+      return sortConfig.direction === 'asc' ? 'supervisor_progress_asc' : 'supervisor_progress_desc';
+    }
+    if (sortConfig.key === 'supervisor_avg_progress') {
+      return sortConfig.direction === 'asc' ? 'supervisor_avg_progress_asc' : 'supervisor_avg_progress_desc';
+    }
     return 'custom';
   };
 
@@ -64,6 +71,14 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
       setSortConfig({ key: 'progress', direction: 'asc' });
     } else if (value === 'progress_desc') {
       setSortConfig({ key: 'progress', direction: 'desc' });
+    } else if (value === 'supervisor_progress_asc') {
+      setSortConfig({ key: 'supervisor_progress', direction: 'asc' });
+    } else if (value === 'supervisor_progress_desc') {
+      setSortConfig({ key: 'supervisor_progress', direction: 'desc' });
+    } else if (value === 'supervisor_avg_progress_asc') {
+      setSortConfig({ key: 'supervisor_avg_progress', direction: 'asc' });
+    } else if (value === 'supervisor_avg_progress_desc') {
+      setSortConfig({ key: 'supervisor_avg_progress', direction: 'desc' });
     }
     setCurrentPage(1);
   };
@@ -92,6 +107,29 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
   const uniqueWards = [...new Set(hlbData.map(item => item.ward))].filter(Boolean).sort((a, b) => Number(a) - Number(b));
   const uniqueCircles = [...new Set(hlbData.map(item => item.supervisorCircle))].filter(Boolean).sort();
 
+  const uniqueSupervisors = useMemo(() => {
+    return [...new Set(hlbData.map(item => item.supervisorName))].filter(Boolean).sort();
+  }, [hlbData]);
+
+  const supervisorAvgProgress = useMemo(() => {
+    const counts = {};
+    hlbData.forEach(item => {
+      const name = item.supervisorName;
+      if (!name) return;
+      const pct = item.expectedHouses > 0 ? (item.surveyedHouses / item.expectedHouses) : 0;
+      if (!counts[name]) {
+        counts[name] = { sum: 0, count: 0 };
+      }
+      counts[name].sum += pct;
+      counts[name].count += 1;
+    });
+    const averages = {};
+    Object.keys(counts).forEach(name => {
+      averages[name] = counts[name].sum / counts[name].count;
+    });
+    return averages;
+  }, [hlbData]);
+
   const filteredData = hlbData.filter(item => {
     const term = searchTerm.toLowerCase();
     const matchesSearch = (
@@ -106,6 +144,7 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
     const matchesZone = zoneFilter ? item.zone === zoneFilter : true;
     const matchesWard = wardFilter ? String(item.ward) === String(wardFilter) : true;
     const matchesCircle = circleFilter ? String(item.supervisorCircle) === String(circleFilter) : true;
+    const matchesSupervisor = supervisorFilter ? item.supervisorName === supervisorFilter : true;
     const matchesStatus = statusFilter ? item.status === statusFilter : true;
     
     let matchesProgress = true;
@@ -147,7 +186,7 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
       else if (feedingFilter === '201+') matchesFeeding = feeding > 200;
     }
 
-    return matchesSearch && matchesZone && matchesWard && matchesCircle && matchesStatus && matchesProgress && matchesFeeding;
+    return matchesSearch && matchesZone && matchesWard && matchesCircle && matchesSupervisor && matchesStatus && matchesProgress && matchesFeeding;
   });
 
   // Sort the filtered data based on sortConfig
@@ -156,6 +195,33 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
       const nameA = (a.supervisorName || '').toLowerCase();
       const nameB = (b.supervisorName || '').toLowerCase();
       return nameA.localeCompare(nameB);
+    }
+
+    if (sortConfig.key === 'supervisor_progress') {
+      const nameA = (a.supervisorName || '').toLowerCase();
+      const nameB = (b.supervisorName || '').toLowerCase();
+      if (nameA !== nameB) {
+        return nameA.localeCompare(nameB);
+      }
+      const valA = a.expectedHouses > 0 ? (a.surveyedHouses / a.expectedHouses) : 0;
+      const valB = b.expectedHouses > 0 ? (b.surveyedHouses / b.expectedHouses) : 0;
+      return sortConfig.direction === 'asc' ? valA - valB : valB - valA;
+    }
+
+    if (sortConfig.key === 'supervisor_avg_progress') {
+      const avgA = supervisorAvgProgress[a.supervisorName] || 0;
+      const avgB = supervisorAvgProgress[b.supervisorName] || 0;
+      if (avgA !== avgB) {
+        return sortConfig.direction === 'asc' ? avgA - avgB : avgB - avgA;
+      }
+      const nameA = (a.supervisorName || '').toLowerCase();
+      const nameB = (b.supervisorName || '').toLowerCase();
+      if (nameA !== nameB) {
+        return nameA.localeCompare(nameB);
+      }
+      const valA = a.expectedHouses > 0 ? (a.surveyedHouses / a.expectedHouses) : 0;
+      const valB = b.expectedHouses > 0 ? (b.surveyedHouses / b.expectedHouses) : 0;
+      return sortConfig.direction === 'asc' ? valA - valB : valB - valA;
     }
 
     let valA, valB;
@@ -505,6 +571,10 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
                 <option value="">All Sup. Circles</option>
                 {uniqueCircles.map(c => <option key={c} value={c}>Circle {c}</option>)}
               </select>
+              <select value={supervisorFilter} onChange={(e) => { setSupervisorFilter(e.target.value); setCurrentPage(1); }} className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                <option value="">All Supervisors</option>
+                {uniqueSupervisors.map(s => <option key={s} value={s}>{toTitleCase(s)}</option>)}
+              </select>
               <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                 <option value="">All Progress Status</option>
                 <option value="Completed">Completed</option>
@@ -572,6 +642,10 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
                 <option value="supervisor_desc">Sort: Supervisor (Z-A)</option>
                 <option value="progress_asc">Sort: Progress (Low to High)</option>
                 <option value="progress_desc">Sort: Progress (High to Low)</option>
+                <option value="supervisor_progress_desc">Sort: Supervisor Wise (High to Low)</option>
+                <option value="supervisor_progress_asc">Sort: Supervisor Wise (Low to High)</option>
+                <option value="supervisor_avg_progress_desc">Sort: Supervisor Performance (High to Low)</option>
+                <option value="supervisor_avg_progress_asc">Sort: Supervisor Performance (Low to High)</option>
                 {getDropdownSortValue() === 'custom' && (
                   <option value="custom">Custom Column Sort</option>
                 )}
