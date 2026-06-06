@@ -852,7 +852,8 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
                         </td>
                       </tr>
                     </React.Fragment>
-                  ))
+                  )
+                })
               ) : (
                 <tr>
                   <td colSpan="15" className="py-12 text-center text-slate-500">
