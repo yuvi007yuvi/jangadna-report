@@ -33,7 +33,7 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
   const [feedingFilter, setFeedingFilter] = useState('');
   const [supervisorFilter, setSupervisorFilter] = useState('');
   const [showAnomalies, setShowAnomalies] = useState(false);
-  
+
   const [sortConfig, setSortConfig] = useState({ key: 'default', direction: 'asc' });
 
   const requestSort = (key) => {
@@ -146,10 +146,10 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
     const matchesCircle = circleFilter ? String(item.supervisorCircle) === String(circleFilter) : true;
     const matchesSupervisor = supervisorFilter ? item.supervisorName === supervisorFilter : true;
     const matchesStatus = statusFilter ? item.status === statusFilter : true;
-    
+
     let matchesProgress = true;
     let progressPercent = item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0;
-    
+
     // Anomaly filter: >=100% progress but not completed
     if (showAnomalies) {
       if (!(progressPercent >= 100 && item.status !== 'Completed')) {
@@ -294,7 +294,7 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
       'Enumerator No.': item.enumeratorNumber || '',
       'Expected': item.expectedHouses,
       'Feeding': item.surveyedHouses,
-      'Progress %': (capProgressAt100 
+      'Progress %': (capProgressAt100
         ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
         : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0)) + '%',
       'Status': item.status || 'Yet To Start'
@@ -309,7 +309,7 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
   const exportToCSV = () => {
     if (filteredData.length === 0) return;
     const headers = ['Sr. No.', 'Charge ID', 'HLB', 'Map HLB Code', 'Village/Ward Name', 'Area', 'Sup. Circle', 'Supervisor Name', 'Sup. No.', 'Enumerator Name', 'Enum. No.', 'Expected', 'Feeding', 'Progress %', 'Status'];
-    
+
     const rows = filteredData.map((item, index) => [
       index + 1,
       item.chargeId || '',
@@ -324,7 +324,7 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
       item.enumeratorNumber || '',
       item.expectedHouses,
       item.surveyedHouses,
-      (capProgressAt100 
+      (capProgressAt100
         ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
         : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0)) + '%',
       item.status || 'Yet To Start'
@@ -347,10 +347,10 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
 
   const exportToPDF = async () => {
     if (filteredData.length === 0) return;
-    
+
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
-    
+
     // Try to load and embed the logo
     try {
       const img = new Image();
@@ -359,7 +359,7 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
         img.onload = resolve;
         img.onerror = reject;
       });
-      
+
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
       canvas.height = img.height;
@@ -373,17 +373,17 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
     } catch (e) {
       console.log('Could not load logo for PDF', e);
     }
-    
+
     doc.setFontSize(22);
     doc.setTextColor(30, 41, 59);
     doc.setFont(undefined, 'bold');
     doc.text("CENSUS OF INDIA 2027", (pageWidth / 2) + 5, 20, { align: 'center' });
-    
+
     doc.setFontSize(10);
     doc.setTextColor(100, 116, 139);
     doc.setFont(undefined, 'bold');
     doc.text("GOVERNMENT OF INDIA • NATIONAL CENSUS", (pageWidth / 2) + 5, 26, { align: 'center' });
-    
+
     doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.5);
     doc.line(14, 32, pageWidth - 14, 32);
@@ -397,9 +397,9 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
     doc.setTextColor(100, 116, 139);
     doc.setFont(undefined, 'normal');
     doc.text(`Data Refreshed: ${data.length > 0 && data[0].date ? data[0].date : new Date().toLocaleDateString('en-IN')}`, pageWidth / 2, 45, { align: 'center' });
-    
+
     const tableHeaders = [['Sr. No.', 'Charge ID', 'HLB', 'Map HLB', 'Village/Ward', 'Area', 'Sup. Circle', 'Supervisor Name', 'Sup. No.', 'Enumerator Name', 'Enum. No.', 'Expected', 'Feeding', 'Progress', 'Status']];
-    
+
     const tableData = filteredData.map((item, index) => [
       index + 1,
       item.chargeId || '-',
@@ -414,7 +414,7 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
       item.enumeratorNumber || '-',
       item.expectedHouses || '0',
       item.surveyedHouses || '0',
-      (capProgressAt100 
+      (capProgressAt100
         ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
         : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0)) + '%',
       item.status || 'Yet To Start'
@@ -450,12 +450,12 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
               data.cell.styles.textColor = [100, 116, 139]; // text-slate-500
             }
           }
-          
+
           // Column 13: Progress %
           if (data.column.index === 13) {
             const text = data.cell.text[0] || '0%';
             const progressVal = parseInt(text.replace('%', '')) || 0;
-            
+
             if (progressVal >= 100) {
               data.cell.styles.fillColor = [209, 250, 229]; // bg-emerald-100
               data.cell.styles.textColor = [6, 95, 70]; // text-emerald-800
@@ -477,7 +477,7 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
               data.cell.styles.textColor = [51, 65, 85]; // text-slate-800
             }
           }
-          
+
           // Column 14: Status
           if (data.column.index === 14) {
             const statusVal = data.cell.text[0] || 'Yet To Start';
@@ -550,7 +550,7 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
               <p className="text-xs text-slate-500 dark:text-slate-400">Manage and view supervisor and enumerator contact details mapped across blocks.</p>
             </div>
           </div>
-          
+
           <div className="flex flex-col gap-3 w-full sm:w-auto items-end">
             <div className="flex gap-2 w-full sm:w-auto">
               <button onClick={exportToExcel} className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 text-xs font-bold shadow-sm shadow-emerald-500/20 transition-all"><FileSpreadsheet className="h-4 w-4" />Excel</button>
@@ -600,17 +600,17 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
                 <option value="201+">201+</option>
               </select>
               <div className="flex items-center gap-1">
-                <input 
-                  type="number" 
-                  placeholder="Min %" 
+                <input
+                  type="number"
+                  placeholder="Min %"
                   value={minProgress}
                   onChange={(e) => { setMinProgress(e.target.value); setCurrentPage(1); }}
                   className="w-20 rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 />
                 <span className="text-slate-400 text-xs">-</span>
-                <input 
-                  type="number" 
-                  placeholder="Max %" 
+                <input
+                  type="number"
+                  placeholder="Max %"
                   value={maxProgress}
                   onChange={(e) => { setMaxProgress(e.target.value); setCurrentPage(1); }}
                   className="w-20 rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
@@ -656,9 +656,9 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
       </div>
 
       <div className="rounded border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden print:border-none print:shadow-none print:overflow-visible">
-        
+
         <div className="flex flex-col items-center justify-center p-8 border-b-4 border-double border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 print:bg-white print:border-none print:p-2 print:pb-4">
-          
+
           <div className="flex items-center gap-6 mb-4 print:hidden">
             <img src="/logo.png" alt="Logo" className="w-24 h-24 object-contain drop-shadow-md" />
             <div className="text-center">
@@ -709,62 +709,71 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
                 {renderSortableHeader('Status', 'status')}
               </tr>
             </thead>
-            
+
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800 print:hidden">
               {paginatedData.length > 0 ? (
                 paginatedData.map((item, index) => {
                   const globalIndex = ((currentPage - 1) * itemsPerPage) + index + 1;
-                  const progressValue = (capProgressAt100 
+                  const prevItem = index > 0 ? paginatedData[index - 1] : null;
+                  const isNewSupervisor = prevItem && prevItem.supervisorName !== item.supervisorName;
+                  const progressValue = (capProgressAt100
                     ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
                     : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0));
-                    
+
                   return (
-                  <tr key={`screen-${index}`} className="hover:bg-amber-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-center font-bold text-slate-500">{globalIndex}</td>
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-mono text-sm text-slate-500">{item.chargeId}</td>
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-slate-800 dark:text-slate-100">{item.hlbId}</td>
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-mono text-purple-700 dark:text-purple-400 font-bold">{item.originalHlbCode || '-'}</td>
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-medium">{item.villageWard || '-'}</td>
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-medium">{item.area}</td>
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-center font-bold text-amber-700 dark:text-amber-500">{item.supervisorCircle || '-'}</td>
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">{toTitleCase(item.supervisorName)}</td>
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-amber-700 dark:text-amber-500">{item.supervisorNumber || '-'}</td>
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">{toTitleCase(item.enumeratorName)}</td>
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-emerald-700 dark:text-emerald-500">{item.enumeratorNumber || '-'}</td>
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-right font-mono font-medium">{item.expectedHouses}</td>
-                    
-                    {/* Feeding Column (Screen) */}
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-center">
-                      {item.surveyedHouses > 0 ? (
-                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md border font-mono font-bold text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-800">
-                          {item.surveyedHouses}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md border font-mono font-bold text-xs bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700">
-                          0
-                        </span>
+                    <React.Fragment key={`screen-group-${index}`}>
+                      {isNewSupervisor && (
+                        <tr className="border-t-[3px] border-slate-400 bg-slate-200 dark:border-slate-500 dark:bg-slate-700">
+                          <td colSpan="15" className="h-1 p-0 border-none"></td>
+                        </tr>
                       )}
-                    </td>
+                      <tr className="hover:bg-amber-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                        <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-center font-bold text-slate-500">{globalIndex}</td>
+                        <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-mono text-sm text-slate-500">{item.chargeId}</td>
+                        <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-slate-800 dark:text-slate-100">{item.hlbId}</td>
+                        <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-mono text-purple-700 dark:text-purple-400 font-bold">{item.originalHlbCode || '-'}</td>
+                        <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-medium">{item.villageWard || '-'}</td>
+                        <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-medium">{item.area}</td>
+                        <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-center font-bold text-amber-700 dark:text-amber-500">{item.supervisorCircle || '-'}</td>
+                        <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">{toTitleCase(item.supervisorName)}</td>
+                        <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-amber-700 dark:text-amber-500">{item.supervisorNumber || '-'}</td>
+                        <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">{toTitleCase(item.enumeratorName)}</td>
+                        <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 font-mono font-medium text-emerald-700 dark:text-emerald-500">{item.enumeratorNumber || '-'}</td>
+                        <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-right font-mono font-medium">{item.expectedHouses}</td>
 
-                    {/* Progress Column (Screen) */}
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-center">
-                      <span className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full font-bold text-xs border ${getProgressBadgeClass(progressValue)}`}>
-                        {progressValue}%
-                      </span>
-                    </td>
+                        {/* Feeding Column (Screen) */}
+                        <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-center">
+                          {item.surveyedHouses > 0 ? (
+                            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md border font-mono font-bold text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-800">
+                              {item.surveyedHouses}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md border font-mono font-bold text-xs bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700">
+                              0
+                            </span>
+                          )}
+                        </td>
 
-                    {/* Status Column (Screen) */}
-                    <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-center">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                        item.status === 'Completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-400 dark:border-emerald-800' :
-                        item.status === 'In Progress' ? 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/50 dark:text-blue-400 dark:border-blue-800' :
-                        'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
-                      }`}>
-                        {item.status || 'Yet To Start'}
-                      </span>
-                    </td>
-                  </tr>
-                )})
+                        {/* Progress Column (Screen) */}
+                        <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-center">
+                          <span className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full font-bold text-xs border ${getProgressBadgeClass(progressValue)}`}>
+                            {progressValue}%
+                          </span>
+                        </td>
+
+                        {/* Status Column (Screen) */}
+                        <td className="border border-slate-200 dark:border-slate-700 py-3 px-4 text-center">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${item.status === 'Completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-400 dark:border-emerald-800' :
+                              item.status === 'In Progress' ? 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/50 dark:text-blue-400 dark:border-blue-800' :
+                                'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+                            }`}>
+                            {item.status || 'Yet To Start'}
+                          </span>
+                        </td>
+                      </tr>
+                    </React.Fragment>
+                  )
+                })
 
               ) : (
                 <tr>
@@ -782,59 +791,68 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
 
             <tbody className="hidden print:table-row-group print:divide-y print:divide-slate-400">
               {filteredData.length > 0 ? (
-                filteredData.map((item, index) => (
-                  <tr key={`print-${index}`}>
-                    <td className="border print:border-slate-400 py-3 px-4 text-center font-bold print:text-black">{index + 1}</td>
-                    <td className="border print:border-slate-400 py-3 px-4 font-mono text-xs print:text-black">{item.chargeId}</td>
-                    <td className="border print:border-slate-400 py-3 px-4 font-mono font-medium print:text-black">{item.hlbId}</td>
-                    <td className="border print:border-slate-400 py-3 px-4 font-mono font-bold print:text-black">{item.originalHlbCode || '-'}</td>
-                    <td className="border print:border-slate-400 py-3 px-4 font-medium print:text-black">{item.villageWard || '-'}</td>
-                    <td className="border print:border-slate-400 py-3 px-4 font-medium print:text-black">{item.area}</td>
-                    <td className="border print:border-slate-400 py-3 px-4 text-center font-bold print:text-black">{item.supervisorCircle || '-'}</td>
-                    <td className="border print:border-slate-400 py-3 px-4 font-semibold print:text-black">{toTitleCase(item.supervisorName)}</td>
-                    <td className="border print:border-slate-400 py-3 px-4 font-mono font-medium print:text-black">{item.supervisorNumber || '-'}</td>
-                    <td className="border print:border-slate-400 py-3 px-4 font-semibold print:text-black">{toTitleCase(item.enumeratorName)}</td>
-                    <td className="border print:border-slate-400 py-3 px-4 font-mono font-medium print:text-black">{item.enumeratorNumber || '-'}</td>
-                    <td className="border print:border-slate-400 py-3 px-4 text-right font-mono font-medium print:text-black">{item.expectedHouses}</td>
-                    
-                    {/* Feeding Column (Print) */}
-                    <td className="border print:border-slate-400 py-3 px-4 text-center">
-                      {item.surveyedHouses > 0 ? (
-                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md border font-mono font-bold text-xs bg-blue-50 text-blue-700 border-blue-200 print:bg-blue-100 print:text-blue-800 print:border-blue-300">
-                          {item.surveyedHouses}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md border font-mono font-bold text-xs bg-slate-50 text-slate-500 border-slate-200 print:bg-slate-100 print:text-slate-600 print:border-slate-300">
-                          0
-                        </span>
+                filteredData.map((item, index) => {
+                  const prevItem = index > 0 ? filteredData[index - 1] : null;
+                  const isNewSupervisor = prevItem && prevItem.supervisorName !== item.supervisorName;
+                  return (
+                    <React.Fragment key={`print-group-${index}`}>
+                      {isNewSupervisor && (
+                        <tr className="border-t-[3px] border-black bg-slate-200 print:bg-slate-200 print:border-black">
+                          <td colSpan="15" className="h-1 p-0 border-none print:h-[2px]"></td>
+                        </tr>
                       )}
-                    </td>
+                      <tr>
+                        <td className="border print:border-slate-400 py-3 px-4 text-center font-bold print:text-black">{index + 1}</td>
+                        <td className="border print:border-slate-400 py-3 px-4 font-mono text-xs print:text-black">{item.chargeId}</td>
+                        <td className="border print:border-slate-400 py-3 px-4 font-mono font-medium print:text-black">{item.hlbId}</td>
+                        <td className="border print:border-slate-400 py-3 px-4 font-mono font-bold print:text-black">{item.originalHlbCode || '-'}</td>
+                        <td className="border print:border-slate-400 py-3 px-4 font-medium print:text-black">{item.villageWard || '-'}</td>
+                        <td className="border print:border-slate-400 py-3 px-4 font-medium print:text-black">{item.area}</td>
+                        <td className="border print:border-slate-400 py-3 px-4 text-center font-bold print:text-black">{item.supervisorCircle || '-'}</td>
+                        <td className="border print:border-slate-400 py-3 px-4 font-semibold print:text-black">{toTitleCase(item.supervisorName)}</td>
+                        <td className="border print:border-slate-400 py-3 px-4 font-mono font-medium print:text-black">{item.supervisorNumber || '-'}</td>
+                        <td className="border print:border-slate-400 py-3 px-4 font-semibold print:text-black">{toTitleCase(item.enumeratorName)}</td>
+                        <td className="border print:border-slate-400 py-3 px-4 font-mono font-medium print:text-black">{item.enumeratorNumber || '-'}</td>
+                        <td className="border print:border-slate-400 py-3 px-4 text-right font-mono font-medium print:text-black">{item.expectedHouses}</td>
 
-                    {/* Progress Column (Print) */}
-                    <td className="border print:border-slate-400 py-3 px-4 text-center">
-                      <span className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full font-bold text-xs border ${getProgressBadgeClass(
-                        capProgressAt100 
-                          ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
-                          : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0)
-                      )}`}>
-                        {(capProgressAt100 
-                          ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
-                          : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0))}%
-                      </span>
-                    </td>
+                        {/* Feeding Column (Print) */}
+                        <td className="border print:border-slate-400 py-3 px-4 text-center">
+                          {item.surveyedHouses > 0 ? (
+                            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md border font-mono font-bold text-xs bg-blue-50 text-blue-700 border-blue-200 print:bg-blue-100 print:text-blue-800 print:border-blue-300">
+                              {item.surveyedHouses}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md border font-mono font-bold text-xs bg-slate-50 text-slate-500 border-slate-200 print:bg-slate-100 print:text-slate-600 print:border-slate-300">
+                              0
+                            </span>
+                          )}
+                        </td>
 
-                    {/* Status Column (Print) */}
-                    <td className="border print:border-slate-400 py-3 px-4 text-center">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                        item.status === 'Completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-300 print:bg-emerald-100 print:text-emerald-800 print:border-emerald-300' :
-                        item.status === 'In Progress' ? 'bg-blue-100 text-blue-800 border-blue-300 print:bg-blue-100 print:text-blue-800 print:border-blue-300' :
-                        'bg-slate-100 text-slate-800 border-slate-300 print:bg-slate-100 print:text-slate-700 print:border-slate-300'
-                      }`}>
-                        {item.status || 'Yet To Start'}
-                      </span>
-                    </td>
-                  </tr>
-                ))
+                        {/* Progress Column (Print) */}
+                        <td className="border print:border-slate-400 py-3 px-4 text-center">
+                          <span className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full font-bold text-xs border ${getProgressBadgeClass(
+                            capProgressAt100
+                              ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
+                              : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0)
+                          )}`}>
+                            {(capProgressAt100
+                              ? (item.expectedHouses > 0 ? Math.min(100, Math.round((item.surveyedHouses / item.expectedHouses) * 100)) : 0)
+                              : (item.expectedHouses > 0 ? Math.round((item.surveyedHouses / item.expectedHouses) * 100) : 0))}%
+                          </span>
+                        </td>
+
+                        {/* Status Column (Print) */}
+                        <td className="border print:border-slate-400 py-3 px-4 text-center">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${item.status === 'Completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-300 print:bg-emerald-100 print:text-emerald-800 print:border-emerald-300' :
+                              item.status === 'In Progress' ? 'bg-blue-100 text-blue-800 border-blue-300 print:bg-blue-100 print:text-blue-800 print:border-blue-300' :
+                                'bg-slate-100 text-slate-800 border-slate-300 print:bg-slate-100 print:text-slate-700 print:border-slate-300'
+                            }`}>
+                            {item.status || 'Yet To Start'}
+                          </span>
+                        </td>
+                      </tr>
+                    </React.Fragment>
+                  ))
               ) : (
                 <tr>
                   <td colSpan="15" className="py-12 text-center text-slate-500">
@@ -871,7 +889,7 @@ export default function ContactReport({ data = [], capProgressAt100 = false }) {
                 </select>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
