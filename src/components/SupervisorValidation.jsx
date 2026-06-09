@@ -16,6 +16,7 @@ import {
   Printer
 } from 'lucide-react';
 import logoImg from '../assets/logo.png';
+import { STAFF_MAPPING } from '../utils/staffMapping';
 export default function SupervisorValidation({ rawCensusData }) {
   const [fileData, setFileData] = useState(null);
   const [error, setError] = useState('');
@@ -131,8 +132,9 @@ export default function SupervisorValidation({ rawCensusData }) {
 
     const processedRows = rows.map(row => {
       const hlbIdVal = String(row['HLBs'] || '').trim();
-      const excelVerified = parseInt(row['Households Verified By Supervisor']) || 0;
-      const excelExpected = parseInt(row['Total number of Households']) || 0;
+      const excelVerified = parseInt(row['Households Verified By Supervisor']) || parseInt(row['Households Verified By']) || 0;
+      const excelExpected = parseInt(row['Total number of Households']) || parseInt(row['Total number of Househ']) || 0;
+      const remark = row['Remark'] || row['Supervisor Remarks'] || '';
 
       // Try to find the matching HLB in master data
       // Sometimes HLB is the full string, sometimes just the short code
@@ -151,19 +153,38 @@ export default function SupervisorValidation({ rawCensusData }) {
         else matchedCount++;
       }
 
+      // Extract core HLB for STAFF_MAPPING lookup
+      let coreHlb = hlbIdVal;
+      if (hlbIdVal.length >= 19) {
+        coreHlb = hlbIdVal.substring(15, 19);
+      } else {
+        let cleanHlb = hlbIdVal;
+        if (cleanHlb.endsWith('00') && cleanHlb.length > 6) {
+          cleanHlb = cleanHlb.slice(0, -2);
+        }
+        coreHlb = cleanHlb.slice(-4).padStart(4, '0');
+      }
+
+      const staffInfo = STAFF_MAPPING[coreHlb] || STAFF_MAPPING[parseInt(coreHlb, 10).toString()];
+
+      const masterSupervisorName = staffInfo ? staffInfo.supervisor : (masterRecord ? masterRecord.supervisorName : 'Not Found');
+      const masterSupervisorNumber = staffInfo ? staffInfo.supervisorMobile : (masterRecord ? masterRecord.supervisorNumber : (row['Supervisor Number'] || row['Supervisor Mobile'] || ''));
+      const masterSupervisorCircle = staffInfo ? staffInfo.supervisorCircle : (masterRecord ? masterRecord.supervisorCircle : (row['Supervisor Circle'] || ''));
+
       return {
         wardNo: row['Ward No'],
         hlbId: hlbIdVal,
         excelExpected,
         excelVerified,
-        excelDifference: parseInt(row['Difference Supervisor Count']) || 0,
+        excelDifference: parseInt(row['Difference Supervisor Count']) || parseInt(row['Difference']) || 0,
         excelPopulation: parseInt(row['Total Population']) || 0,
         masterRecord,
         masterVerified,
         masterSurveyed,
-        masterSupervisor: masterRecord ? masterRecord.supervisorName : 'Not Found',
-        masterSupervisorNumber: masterRecord ? masterRecord.supervisorNumber : (row['Supervisor Number'] || row['Supervisor Mobile'] || ''),
-        masterSupervisorCircle: masterRecord ? masterRecord.supervisorCircle : (row['Supervisor Circle'] || ''),
+        masterSupervisor: masterSupervisorName,
+        masterSupervisorNumber: masterSupervisorNumber,
+        masterSupervisorCircle: masterSupervisorCircle,
+        remark: remark,
         isMismatch
       };
     }).filter(r => r.hlbId); // filter out empty rows
@@ -375,13 +396,6 @@ export default function SupervisorValidation({ rawCensusData }) {
     );
   }
 
-  const getProgressBadgeClass = (progress) => {
-    if (progress >= 100) return "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-400 dark:border-emerald-800";
-    if (progress >= 90) return "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/50 dark:text-blue-400 dark:border-blue-800";
-    if (progress >= 50) return "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-400 dark:border-amber-800";
-    return "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-900/50 dark:text-rose-400 dark:border-rose-800";
-  };
-
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-8">
       <style>{`
@@ -572,15 +586,15 @@ export default function SupervisorValidation({ rawCensusData }) {
                   </tr>
                   <tr>
                     <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 w-16 text-center">Sr. No.</th>
-                    {renderSortableHeader('HLB Code', 'hlb')}
-                    {renderSortableHeader('Ward', 'ward')}
+                    {renderSortableHeader('Ward No', 'ward')}
+                    {renderSortableHeader('HLBs', 'hlb')}
                     {renderSortableHeader('Supervisor Name', 'supervisor')}
                     {renderSortableHeader('Circle', 'circle')}
                     <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">Contact No.</th>
-                    {renderSortableHeader('Expected', 'expected', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300')}
-                    {renderSortableHeader('Verified', 'verified', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300')}
+                    {renderSortableHeader('Total number of Househ', 'expected', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300')}
+                    {renderSortableHeader('Households Verified By', 'verified', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300')}
                     {renderSortableHeader('Difference', 'difference')}
-                    {renderSortableHeader('Progress', 'progress')}
+                    <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">Remark</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -588,8 +602,8 @@ export default function SupervisorValidation({ rawCensusData }) {
                     filteredData.map((row, idx) => (
                       <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                         <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 text-slate-900 font-medium">{idx + 1}</td>
-                        <td className="px-4 py-3 font-mono text-center border border-slate-200 dark:border-slate-700 font-bold">{row.hlbId}</td>
                         <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">{row.wardNo || '-'}</td>
+                        <td className="px-4 py-3 font-mono text-center border border-slate-200 dark:border-slate-700 font-bold">{row.hlbId}</td>
                         <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 font-semibold text-slate-900">{row.masterSupervisor}</td>
                         <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 text-slate-800 text-xs">{row.masterSupervisorCircle || '-'}</td>
                         <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 text-slate-800 font-mono text-xs">{row.masterSupervisorNumber || '-'}</td>
@@ -608,14 +622,7 @@ export default function SupervisorValidation({ rawCensusData }) {
                             </span>
                           )}
                         </td>
-
-                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">
-                          <span className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full border font-bold text-xs ${
-                            row.excelExpected > 0 ? getProgressBadgeClass((row.excelVerified / row.excelExpected) * 100) : getProgressBadgeClass(0)
-                          }`}>
-                            {row.excelExpected > 0 ? ((row.excelVerified / row.excelExpected) * 100).toFixed(1) + '%' : '0.0%'}
-                          </span>
-                        </td>
+                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700 text-xs">{row.remark || '-'}</td>
                       </tr>
                     ))
                   ) : (
@@ -649,10 +656,9 @@ export default function SupervisorValidation({ rawCensusData }) {
                     {renderSortableHeader('Circle', 'circle')}
                     <th className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-center">Contact No.</th>
                     {renderSortableHeader('Total HLBs', 'totalHlbs')}
-                    {renderSortableHeader('Expected', 'expected', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300')}
-                    {renderSortableHeader('Verified', 'verified', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300')}
+                    {renderSortableHeader('Total number of Househ', 'expected', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300')}
+                    {renderSortableHeader('Households Verified By', 'verified', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300')}
                     {renderSortableHeader('Difference', 'difference')}
-                    {renderSortableHeader('Progress', 'progress')}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -679,14 +685,6 @@ export default function SupervisorValidation({ rawCensusData }) {
                             </span>
                           )}
                         </td>
-
-                        <td className="px-4 py-3 text-center border border-slate-200 dark:border-slate-700">
-                          <span className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full border font-bold text-xs ${
-                            sup.excelExpected > 0 ? getProgressBadgeClass((sup.excelVerified / sup.excelExpected) * 100) : getProgressBadgeClass(0)
-                          }`}>
-                            {sup.excelExpected > 0 ? ((sup.excelVerified / sup.excelExpected) * 100).toFixed(1) + '%' : '0.0%'}
-                          </span>
-                        </td>
                       </tr>
                     ))
                   ) : (
@@ -704,13 +702,8 @@ export default function SupervisorValidation({ rawCensusData }) {
                       <td className="px-4 py-4 text-center font-mono border border-slate-200 dark:border-slate-700">{supervisorTotals.hlbCount}</td>
                       <td className="px-4 py-4 text-center font-mono border border-slate-200 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/20">{supervisorTotals.excelExpected}</td>
                       <td className="px-4 py-4 text-center font-mono border border-slate-200 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/20">{supervisorTotals.excelVerified}</td>
-                      <td className={`px-4 py-4 text-center font-mono border border-slate-200 dark:border-slate-700 ${supervisorTotals.excelDifference > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                      <td colSpan="2" className={`px-4 py-4 text-center font-mono border border-slate-200 dark:border-slate-700 ${supervisorTotals.excelDifference > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'}`}>
                         {supervisorTotals.excelDifference}
-                      </td>
-                      <td className="px-4 py-4 text-center border border-slate-200 dark:border-slate-700 font-bold">
-                        {supervisorTotals.excelExpected > 0
-                          ? ((supervisorTotals.excelVerified / supervisorTotals.excelExpected) * 100).toFixed(1) + '%'
-                          : '0.0%'}
                       </td>
                     </tr>
                   </tbody>
