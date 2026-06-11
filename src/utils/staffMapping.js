@@ -2,9 +2,9 @@ export const STAFF_MAPPING = {
   "167": {
     "originalHlbCode": "167",
     "villageWard": "Ranchi Bangar (0032)",
-    "supervisorCircle": "29",
-    "supervisor": "Nirupama agrawal",
-    "supervisorMobile": "9410446536",
+    "supervisorCircle": "30",
+    "supervisor": "Smita Dwivedi",
+    "supervisorMobile": "9140155192",
     "enumerator": "OMVATI",
     "enumeratorMobile": "8439421742"
   },
@@ -249,7 +249,7 @@ export const STAFF_MAPPING = {
     "supervisor": "panjabi sharma",
     "supervisorMobile": "8279340311",
     "enumerator": "Sunita Saini",
-    "enumeratorMobile": "9410813454"
+    "enumeratorMobile": "9410813454\r\n9084099748"
   },
   "0290": {
     "originalHlbCode": "0290",
@@ -445,16 +445,16 @@ export const STAFF_MAPPING = {
     "villageWard": "Adooki (0006)",
     "supervisorCircle": "8",
     "supervisor": "PANCHAM SINGH",
-    "supervisorMobile": "",
-    "enumerator": "",
-    "enumeratorMobile": ""
+    "supervisorMobile": "6005358679",
+    "enumerator": "Anita Verma",
+    "enumeratorMobile": "8077020744"
   },
   "0082": {
     "originalHlbCode": "0082",
     "villageWard": "Maholi First (0015)",
     "supervisorCircle": "8",
     "supervisor": "PANCHAM SINGH",
-    "supervisorMobile": "",
+    "supervisorMobile": "6005358679",
     "enumerator": "RICHA VERMA",
     "enumeratorMobile": "7668559967"
   },
@@ -463,7 +463,7 @@ export const STAFF_MAPPING = {
     "villageWard": "Maholi First (0015)",
     "supervisorCircle": "8",
     "supervisor": "PANCHAM SINGH",
-    "supervisorMobile": "",
+    "supervisorMobile": "6005358679",
     "enumerator": "Kishan Lal",
     "enumeratorMobile": "9927403510"
   },
@@ -472,7 +472,7 @@ export const STAFF_MAPPING = {
     "villageWard": "Maholi First (0015)",
     "supervisorCircle": "8",
     "supervisor": "PANCHAM SINGH",
-    "supervisorMobile": "",
+    "supervisorMobile": "6005358679",
     "enumerator": "manjulata",
     "enumeratorMobile": "7500617850"
   },
@@ -481,7 +481,7 @@ export const STAFF_MAPPING = {
     "villageWard": "Maholi First (0015)",
     "supervisorCircle": "8",
     "supervisor": "PANCHAM SINGH",
-    "supervisorMobile": "",
+    "supervisorMobile": "6005358679",
     "enumerator": "Brijraj singh",
     "enumeratorMobile": "7983712090"
   },
@@ -490,7 +490,7 @@ export const STAFF_MAPPING = {
     "villageWard": "Maholi First (0015)",
     "supervisorCircle": "8",
     "supervisor": "PANCHAM SINGH",
-    "supervisorMobile": "",
+    "supervisorMobile": "6005358679",
     "enumerator": "MANJU GAUTAM",
     "enumeratorMobile": "9105297705"
   },
@@ -499,7 +499,7 @@ export const STAFF_MAPPING = {
     "villageWard": "Maholi First (0015)",
     "supervisorCircle": "8",
     "supervisor": "PANCHAM SINGH",
-    "supervisorMobile": "",
+    "supervisorMobile": "6005358679",
     "enumerator": "Parvesh",
     "enumeratorMobile": "9927463720"
   },
@@ -1076,7 +1076,7 @@ export const STAFF_MAPPING = {
     "supervisorCircle": "19",
     "supervisor": "sunita",
     "supervisorMobile": "9456054821",
-    "enumerator": "NARMAD DEVI",
+    "enumerator": "NARVADA DEVI",
     "enumeratorMobile": "8279670151"
   },
   "0183": {
@@ -1166,7 +1166,7 @@ export const STAFF_MAPPING = {
     "supervisorCircle": "20",
     "supervisor": "MAYANK DEV",
     "supervisorMobile": "9897455271",
-    "enumerator": "DeePTI",
+    "enumerator": "Mahesh chandra",
     "enumeratorMobile": "9627291158"
   },
   "0015": {
@@ -1473,7 +1473,7 @@ export const STAFF_MAPPING = {
     "supervisor": "ANIL KUMAR",
     "supervisorMobile": "9368165841",
     "enumerator": "Manish kumar",
-    "enumeratorMobile": "9456257088"
+    "enumeratorMobile": "9456257088\r\n9058160702"
   },
   "0196": {
     "originalHlbCode": "0196",
@@ -1491,7 +1491,7 @@ export const STAFF_MAPPING = {
     "supervisor": "ANIL KUMAR",
     "supervisorMobile": "9368165841",
     "enumerator": "Mahesh chardra",
-    "enumeratorMobile": "9410001605"
+    "enumeratorMobile": "9410001605\r\n9756466870"
   },
   "0198": {
     "originalHlbCode": "0198",
@@ -1707,7 +1707,7 @@ export const STAFF_MAPPING = {
     "supervisor": "Nirupama agrawal",
     "supervisorMobile": "9410446536",
     "enumerator": "Kaushalya",
-    "enumeratorMobile": "8477082315"
+    "enumeratorMobile": "8477082315\r\n8477082308"
   },
   "0179": {
     "originalHlbCode": "0179",
@@ -1721,45 +1721,45 @@ export const STAFF_MAPPING = {
   "0159": {
     "originalHlbCode": "0159",
     "villageWard": "Ranchi Bangar (0032)",
-    "supervisorCircle": "29",
-    "supervisor": "Nirupama agrawal",
-    "supervisorMobile": "9410446536",
+    "supervisorCircle": "30",
+    "supervisor": "Smita Dwivedi",
+    "supervisorMobile": "9140155192",
     "enumerator": "SHUBHAM",
     "enumeratorMobile": "8077538971"
   },
   "0160": {
     "originalHlbCode": "0160",
     "villageWard": "Ranchi Bangar (0032)",
-    "supervisorCircle": "29",
-    "supervisor": "Nirupama agrawal",
-    "supervisorMobile": "9410446536",
+    "supervisorCircle": "30",
+    "supervisor": "Smita Dwivedi",
+    "supervisorMobile": "9140155192",
     "enumerator": "DHAMENDRA SINGH",
     "enumeratorMobile": "9761669948"
   },
   "0166": {
     "originalHlbCode": "0166",
     "villageWard": "Ranchi Bangar (0032)",
-    "supervisorCircle": "29",
-    "supervisor": "Nirupama agrawal",
-    "supervisorMobile": "9410446536",
+    "supervisorCircle": "30",
+    "supervisor": "Smita Dwivedi",
+    "supervisorMobile": "9140155192",
     "enumerator": "MO ANAS",
     "enumeratorMobile": "8979030611"
   },
   "0168": {
     "originalHlbCode": "0168",
     "villageWard": "Ranchi Bangar (0032)",
-    "supervisorCircle": "29",
-    "supervisor": "Nirupama agrawal",
-    "supervisorMobile": "9410446536",
+    "supervisorCircle": "30",
+    "supervisor": "Smita Dwivedi",
+    "supervisorMobile": "9140155192",
     "enumerator": "Neelam",
     "enumeratorMobile": "8171182607"
   },
   "0176": {
     "originalHlbCode": "0176",
     "villageWard": "Ranchi Bangar (0032)",
-    "supervisorCircle": "29",
-    "supervisor": "Nirupama agrawal",
-    "supervisorMobile": "9410446536",
+    "supervisorCircle": "30",
+    "supervisor": "Smita Dwivedi",
+    "supervisorMobile": "9140155192",
     "enumerator": "Nirmisha Verma",
     "enumeratorMobile": "9412550465"
   },
@@ -1876,16 +1876,16 @@ export const STAFF_MAPPING = {
     "villageWard": "Koyla Alipur (0029)",
     "supervisorCircle": "33",
     "supervisor": "RAJKUMARI",
-    "supervisorMobile": "",
-    "enumerator": "",
-    "enumeratorMobile": ""
+    "supervisorMobile": "9411204243",
+    "enumerator": "PRIYANKA SHARMA",
+    "enumeratorMobile": "8191977216"
   },
   "0145": {
     "originalHlbCode": "0145",
     "villageWard": "Koyla Alipur (0029)",
     "supervisorCircle": "33",
     "supervisor": "RAJKUMARI",
-    "supervisorMobile": "",
+    "supervisorMobile": "9411204243",
     "enumerator": "GUNJAN SHARMA",
     "enumeratorMobile": "7906229901"
   },
@@ -1894,7 +1894,7 @@ export const STAFF_MAPPING = {
     "villageWard": "Ranchi Bangar (0032)",
     "supervisorCircle": "33",
     "supervisor": "RAJKUMARI",
-    "supervisorMobile": "",
+    "supervisorMobile": "9411204243",
     "enumerator": "ASHA RANI",
     "enumeratorMobile": "9456881275"
   },
@@ -1903,7 +1903,7 @@ export const STAFF_MAPPING = {
     "villageWard": "Ranchi Bangar (0032)",
     "supervisorCircle": "33",
     "supervisor": "RAJKUMARI",
-    "supervisorMobile": "",
+    "supervisorMobile": "9411204243",
     "enumerator": "Priya Yadav",
     "enumeratorMobile": "7906552469"
   },
@@ -1912,7 +1912,7 @@ export const STAFF_MAPPING = {
     "villageWard": "Ranchi Bangar (0032)",
     "supervisorCircle": "33",
     "supervisor": "RAJKUMARI",
-    "supervisorMobile": "",
+    "supervisorMobile": "9411204243",
     "enumerator": "HUKUM SINGH",
     "enumeratorMobile": "7078266826"
   },
@@ -1921,7 +1921,7 @@ export const STAFF_MAPPING = {
     "villageWard": "Ranchi Bangar (0032)",
     "supervisorCircle": "33",
     "supervisor": "RAJKUMARI",
-    "supervisorMobile": "",
+    "supervisorMobile": "9411204243",
     "enumerator": "Bhavana upadhyay",
     "enumeratorMobile": "6395956618"
   },
@@ -1994,8 +1994,8 @@ export const STAFF_MAPPING = {
     "supervisorCircle": "35",
     "supervisor": "Kuldip kumar Gupta",
     "supervisorMobile": "7566902346",
-    "enumerator": "ANITA VERMA",
-    "enumeratorMobile": "8077020744"
+    "enumerator": "Rajpati yadav",
+    "enumeratorMobile": "9456683484"
   },
   "0122": {
     "originalHlbCode": "0122",
@@ -2038,16 +2038,16 @@ export const STAFF_MAPPING = {
     "villageWard": "Aurangabad- First (0010)",
     "supervisorCircle": "36",
     "supervisor": "SEEMA RANI",
-    "supervisorMobile": "9411966478",
-    "enumerator": "",
-    "enumeratorMobile": ""
+    "supervisorMobile": "9411966478\r\n7037166478",
+    "enumerator": "LATAKUMARI",
+    "enumeratorMobile": "9012257147"
   },
   "0058": {
     "originalHlbCode": "0058",
     "villageWard": "Aurangabad- First (0010)",
     "supervisorCircle": "36",
     "supervisor": "SEEMA RANI",
-    "supervisorMobile": "9411966478",
+    "supervisorMobile": "9411966478\r\n7037166478",
     "enumerator": "hemlata",
     "enumeratorMobile": "9410810315"
   },
@@ -2056,7 +2056,7 @@ export const STAFF_MAPPING = {
     "villageWard": "Aurangabad- First (0010)",
     "supervisorCircle": "36",
     "supervisor": "SEEMA RANI",
-    "supervisorMobile": "9411966478",
+    "supervisorMobile": "9411966478\r\n7037166478",
     "enumerator": "Manju Gautam",
     "enumeratorMobile": "9568981474"
   },
@@ -2065,7 +2065,7 @@ export const STAFF_MAPPING = {
     "villageWard": "Aurangabad- Second (0028)",
     "supervisorCircle": "36",
     "supervisor": "SEEMA RANI",
-    "supervisorMobile": "9411966478",
+    "supervisorMobile": "9411966478\r\n7037166478",
     "enumerator": "Meenu Sharma",
     "enumeratorMobile": "6395836561"
   },
@@ -2074,7 +2074,7 @@ export const STAFF_MAPPING = {
     "villageWard": "Aurangabad- Second (0028)",
     "supervisorCircle": "36",
     "supervisor": "SEEMA RANI",
-    "supervisorMobile": "9411966478",
+    "supervisorMobile": "9411966478\r\n7037166478",
     "enumerator": "Rakshpal Singh",
     "enumeratorMobile": "9760575037"
   },
@@ -2083,7 +2083,7 @@ export const STAFF_MAPPING = {
     "villageWard": "Aurangabad- Second (0028)",
     "supervisorCircle": "36",
     "supervisor": "SEEMA RANI",
-    "supervisorMobile": "9411966478",
+    "supervisorMobile": "9411966478\r\n7037166478",
     "enumerator": "CHANDPABHA",
     "enumeratorMobile": "9410840105"
   },
@@ -3291,7 +3291,7 @@ export const STAFF_MAPPING = {
     "supervisor": "Parul sharma",
     "supervisorMobile": "9808758792",
     "enumerator": "Deependra singh",
-    "enumeratorMobile": "9680171411"
+    "enumeratorMobile": "9680171411\r\n7078323620 Babli"
   },
   "0327": {
     "originalHlbCode": "0327",
@@ -3345,7 +3345,7 @@ export const STAFF_MAPPING = {
     "supervisor": "Munesh saini",
     "supervisorMobile": "6397846443",
     "enumerator": "Madhubala",
-    "enumeratorMobile": ""
+    "enumeratorMobile": "8171731120 \r\nHLB 0331 per 0091 ki pragnak kary kr chuki hai ab inko kuch or dena hai"
   },
   "0333": {
     "originalHlbCode": "0333",
